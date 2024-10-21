@@ -1,4 +1,4 @@
-package com.streaming.settlement.system.memberservice.domain.core.entity;
+package com.streaming.settlement.system.memberservice.domain.core.entity.enums;
 
 public enum OAuthProvider {
     GOOGLE
