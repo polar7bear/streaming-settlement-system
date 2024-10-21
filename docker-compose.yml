@@ -1,0 +1,51 @@
+services:
+  member-service:
+    container_name: member-service
+    build:
+      dockerfile: docker/Dockerfile-member-service
+      context: ./
+    depends_on:
+      - sss-database
+      - config-server
+    image: sss/member-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://sss-database:3306/member-service-db
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+
+    ports:
+      - "8500:8500"
+    restart: always
+    networks:
+      - sss-network
+
+
+  config-server:
+    container_name: config-server
+    build:
+      dockerfile: docker/Dockerfile-config-server
+      context: ./
+    image: sss/config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - sss-network
+
+
+  sss-database:
+    container_name: sss-database
+    build:
+      dockerfile: Dockerfile
+      context: ./db
+    image: sss/database
+    environment:
+      - MYSQL_DATABASE=member-service-db
+      - MYSQL_ROOT_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    ports:
+      - "3306:3306"
+    networks:
+      - sss-network
+
+networks:
+  sss-network:
+    driver: bridge

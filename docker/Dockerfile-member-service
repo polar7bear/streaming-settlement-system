@@ -1,0 +1,64 @@
+FROM openjdk:21-jdk-slim
+
+WORKDIR /app
+
+# Copy Gradle wrapper and other necessary files
+COPY gradlew /app/
+COPY gradle /app/gradle/
+COPY build.gradle /app/
+COPY settings.gradle /app/
+
+COPY common/build.gradle /app/common/
+COPY common/src /app/common/src
+
+COPY member-service/build.gradle /app/member-service/
+COPY member-service/src /app/member-service/src
+
+# Ensure gradlew is executable
+RUN chmod +x gradlew
+
+# Build the application
+RUN ./gradlew member-service:build -x test --stacktrace
+
+# Check the build output directory
+RUN ls -l member-service/build/libs/
+
+# Copy the built JAR file to /app.jar
+RUN cp member-service/build/libs/member-service-0.0.1-SNAPSHOT.jar /app.jar
+
+# Expose port
+EXPOSE 8500
+
+# Run the application
+CMD ["java", "-jar", "/app.jar"]
+
+
+#FROM gradle:jdk-21-and-22 AS build
+#WORKDIR /home/app
+#
+##COPY ./build.gradle /home/app/build.gradle
+##COPY ./src/main/java/com/streaming/settlement/system/memberservice/MemberServiceApplication.java /home/app/src/main/java/com/streaming/settlement/system/memberservice/MemberServiceApplication.java
+#
+#COPY gradlew /home/app/
+#COPY gradle /home/app/gradle/
+#COPY build.gradle /home/app/
+#
+#COPY common/build.gradle /home/app/common/
+#COPY common/src /home/app/common/src
+#
+#COPY member-service/build.gradle /home/app/member-service/
+#COPY member-service/src /home/app/member-service/src
+#
+##COPY member-service/src/main/java/com/streaming/settlement/system/memberservice/MemberServiceApplication.java /home/app/member-service/src/main/java/com/streaming/settlement/system/memberservice/MemberServiceApplication.java
+#
+#COPY settings.gradle /home/app/
+#
+##RUN gradle build --no-daemon
+#RUN gradle build --no-daemon --no-build-cache
+#
+#RUN cp member-service/build/libs/member-service.jar /app.jar
+#
+#FROM eclipse-temurin:21-jdk-alpine
+#EXPOSE 8500
+#COPY --from=build /home/app/member-service/build/libs/*.jar app.jar
+#ENTRYPOINT ["java", "-jar", "/app.jar"]
