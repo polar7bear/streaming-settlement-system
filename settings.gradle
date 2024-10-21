@@ -1,6 +1,8 @@
 rootProject.name = 'streaming-settlement-system'
 
 include 'common'
+include 'config-server'
 
 include 'member-service'
-include 'streaming-ad-service'
+//include 'streaming-ad-service'
+
