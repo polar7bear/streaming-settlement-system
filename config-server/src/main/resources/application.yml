@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: git@github.com:polar7bear/streaming-settlement-system-config-repo.git
+          search-paths:
+            - member-service
+          default-label: main
+          ignore-local-ssh-settings: true
+          private-key: |
+            -----BEGIN RSA PRIVATE KEY-----
+            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
+            -----END RSA PRIVATE KEY-----
+
+            
+
+server:
+  port: 8888
