@@ -1,6 +1,9 @@
 package com.streaming.settlement.system.memberservice.domain.core.entity;
 
 import com.streaming.settlement.system.common.entity.BaseTimeEntity;
+import com.streaming.settlement.system.memberservice.domain.core.entity.enums.OAuthProvider;
+import com.streaming.settlement.system.memberservice.domain.core.entity.enums.Role;
+import com.streaming.settlement.system.memberservice.domain.core.entity.enums.Tier;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,6 +24,9 @@ public class Member extends BaseTimeEntity {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false, length = 30)
+    private String nickname;
+
     @Column(nullable = false)
     private Role role;
 
@@ -28,9 +34,5 @@ public class Member extends BaseTimeEntity {
     private Tier tier;
 
     private OAuthProvider oAuthProvider;
-
-    private String oauthId;
-
-
 
 }
