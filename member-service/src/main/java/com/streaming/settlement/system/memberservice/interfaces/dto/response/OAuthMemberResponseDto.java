@@ -7,7 +7,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class UserResponseDto {
+public class OAuthMemberResponseDto {
     private String email;
     private String nickname;
     private Role role;
