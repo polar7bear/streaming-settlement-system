@@ -1,6 +1,6 @@
 package com.streaming.settlement.system.memberservice.infrastructure.config.security.oauth;
 
-import com.streaming.settlement.system.memberservice.interfaces.dto.response.UserResponseDto;
+import com.streaming.settlement.system.memberservice.interfaces.dto.response.OAuthMemberResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -12,7 +12,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomOAuth2User implements OAuth2User {
 
-    private final UserResponseDto userResponseDto;
+    private final OAuthMemberResponseDto userResponseDto;
 
     @Override
     public Map<String, Object> getAttributes() {
