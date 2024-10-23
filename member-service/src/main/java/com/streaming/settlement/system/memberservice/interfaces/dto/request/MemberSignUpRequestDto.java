@@ -1,10 +1,7 @@
 package com.streaming.settlement.system.memberservice.interfaces.dto.request;
 
 import com.streaming.settlement.system.memberservice.domain.core.entity.enums.Role;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,7 +26,7 @@ public class MemberSignUpRequestDto {
     @Size(min = 2, max = 8, message = "2글자 이상, 8글자 이하로 입력해주세요.")
     private String nickname;
 
-    @NotBlank
+    @NotNull
     private Role role;
 
     /*@Pattern(regexp = "^\\d{3}-\\d{4}-\\d{4}$", message = "전화번호 형식은 XXX-XXXX-XXXX이어야 합니다.")
