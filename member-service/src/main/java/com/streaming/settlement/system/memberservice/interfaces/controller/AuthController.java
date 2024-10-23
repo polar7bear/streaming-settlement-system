@@ -30,7 +30,7 @@ public class AuthController {
 
     @PostMapping("/sign-in")
     public ApiResponse<String> signIn(@Valid @RequestBody MemberSignInRequestDto dto, HttpServletResponse response) {
-        String message = authService.signIn(dto, response);
+        String message = authService.signInV2(dto, response);
         return new ApiResponse<>(message);
     }
 
