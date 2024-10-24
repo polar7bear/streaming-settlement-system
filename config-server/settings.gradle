@@ -1,4 +1,3 @@
 rootProject.name = 'streaming-settlement-system'
 
-include 'common'
 include 'config-server'

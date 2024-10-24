@@ -10,9 +10,6 @@ COPY gradle /app/gradle/
 COPY build.gradle /app/
 COPY settings.gradle /app/
 
-COPY common/build.gradle /app/common/
-COPY common/src /app/common/src
-
 COPY config-server/build.gradle /app/config-server/
 COPY config-server/src /app/config-server/src
 
@@ -33,33 +30,3 @@ EXPOSE 8888
 
 # Run the application
 CMD ["java", "-jar", "/app.jar"]
-
-#FROM gradle:jdk-21-and-22 AS build
-#WORKDIR /home/app
-#
-##COPY ./build.gradle /home/app/build.gradle
-##COPY ./src/main/java/com/streaming/settlement/system/configserver/ConfigServerApplication.java /home/app/src/main/java/com/streaming/settlement/system/configserver/ConfigServerApplication.java
-#
-#COPY gradlew /home/app/
-#COPY gradle /home/app/gradle/
-#COPY build.gradle /home/app/
-#
-#COPY common/build.gradle /home/app/common/
-#COPY common/src /home/app/common/src
-#
-#COPY config-server/build.gradle /home/app/config-server/
-#COPY config-server/src /home/app/config-server/src
-#
-##COPY config-server/src/main/java/com/streaming/settlement/system/configserver/ConfigServerApplication.java /home/app/config-server/src/main/java/com/streaming/settlement/system/configserver/ConfigServerApplication.java
-#
-#COPY settings.gradle /home/app/
-#
-##RUN gradle build --no-daemon
-#RUN gradle build --no-daemon --no-build-cache
-#
-#RUN cp config-server/build/libs/config-server.jar /app.jar
-#
-#FROM eclipse-temurin:21-jdk-alpine
-#EXPOSE 8888
-#COPY --from=build /home/app/config-server/build/libs/*.jar app.jar
-#ENTRYPOINT ["java", "-jar", "/app.jar"]

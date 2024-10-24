@@ -4,9 +4,6 @@ services:
     build:
       dockerfile: docker/Dockerfile-member-service
       context: ./
-    depends_on:
-      - sss-database
-      - config-server
     image: sss/member-service
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://sss-database:3306/member-service-db
@@ -15,13 +12,70 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JWT_SECRET=${JWT_SECRET}
-
     ports:
       - "8500:8500"
     restart: always
     networks:
       - sss-network
+    depends_on:
+      sss-database:
+        condition: service_healthy
 
+
+  streaming-ad-service:
+    container_name: streaming-ad-service
+    build:
+      dockerfile: docker/Dockerfile-streaming-ad-service
+      context: ./
+    image: sss/streaming-ad-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://sss-database:3306/member-service-db
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+
+    ports:
+      - "8000:8000"
+    restart: always
+    networks:
+      - sss-network
+
+    depends_on:
+      sss-database:
+        condition: service_healthy
+
+  api-gateway:
+    container_name: api-gateway
+    build:
+      dockerfile: docker/Dockerfile-gateway-server
+      context: ./
+    image: sss/api-gateway
+    ports:
+      - "8765:8765"
+    restart: always
+    networks:
+      - sss-network
+
+    depends_on:
+      sss-database:
+        condition: service_healthy
+
+
+  eureka-server:
+    container_name: eureka-server
+    build:
+      dockerfile: docker/Dockerfile-eureka-server
+      context: ./
+    image: sss/eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - sss-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://eureka-server:8761/actuator/health"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
 
   config-server:
     container_name: config-server
@@ -34,6 +88,11 @@ services:
     networks:
       - sss-network
 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://config-server:8888/actuator/health"]
+      interval: 10s
+      retries: 3
+      start_period: 5s
 
   sss-database:
     container_name: sss-database
@@ -48,6 +107,12 @@ services:
       - "3306:3306"
     networks:
       - sss-network
+
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "sss-database" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
 
 networks:
   sss-network:
