@@ -13,6 +13,9 @@ dependencies {
     // config client
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
 
+    // eureka client
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
     // security
     implementation 'org.springframework.boot:spring-boot-starter-security'
     testImplementation 'org.springframework.security:spring-security-test'
