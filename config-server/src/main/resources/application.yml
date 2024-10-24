@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: config-server
+
+  profiles:
+    active: local
+
+  cloud:
+    config:
+      server:
+        git:
+          uri: git@github.com:polar7bear/streaming-settlement-system-config-repo.git
+          search-paths:
+            - member-service
+            - streaming-service
+          default-label: main
+          ignore-local-ssh-settings: true
+          private-key: ${private_key}
+
+
+
+server:
+  port: 8888
+

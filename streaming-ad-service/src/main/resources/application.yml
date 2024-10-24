@@ -1,6 +1,6 @@
 spring:
   application:
-    name: member-service
+    name: streaming-ad-service
 
   profiles:
     active: local
@@ -11,7 +11,8 @@ spring:
   cloud:
     config:
       profile: local
-      name: member-service
+      name: streaming-service
+
 
 server:
-  port: 8500
+  port: 8000
