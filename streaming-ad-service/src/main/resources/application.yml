@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: member-service
+
+  profiles:
+    active: local
+
+  config:
+    import: optional:configserver:http://config-server:8888
+
+  cloud:
+    config:
+      profile: local
+      name: member-service
+
+server:
+  port: 8500

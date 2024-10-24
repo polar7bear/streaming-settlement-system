@@ -1,0 +1,3 @@
+rootProject.name = 'eureka-server'
+
+inlcude 'eureka-server'
