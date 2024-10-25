@@ -5,6 +5,7 @@ import com.streaming.settlement.system.common.api.ApiErrorType;
 import com.streaming.settlement.system.common.api.ApiResponse;
 import com.streaming.settlement.system.common.api.exception.member.DuplicateMemberException;
 import com.streaming.settlement.system.common.api.exception.member.WrongPasswordException;
+import com.streaming.settlement.system.common.api.exception.streaming.NotFoundStreamingException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -26,5 +27,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleWrongPasswordException(WrongPasswordException e) {
         return new ApiError(ApiErrorType.BAD_REQUEST, "400", "비밀번호가 일치하지 않습니다.", e);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(value = {NotFoundStreamingException.class})
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleNotFoundStreamingException(NotFoundStreamingException e) {
+        return new ApiError(ApiErrorType.NOT_FOUND, "404", "존재하지 않는 동영상 혹은 재생이 불가능한 동영상입니다.", e);
     }
 }
