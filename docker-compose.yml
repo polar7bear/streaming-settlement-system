@@ -29,7 +29,7 @@ services:
       context: ./
     image: sss/streaming-ad-service
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://sss-database:3306/member-service-db
+      - SPRING_DATASOURCE_URL=jdbc:mysql://sss-database:3306/streaming-ad-service-db
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
 
@@ -101,10 +101,12 @@ services:
       context: ./db
     image: sss/database
     environment:
-      - MYSQL_DATABASE=member-service-db
       - MYSQL_ROOT_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
     ports:
       - "3306:3306"
+    volumes:
+      - ./db/config:/etc/mysql/conf.d
+      - ./db/init:/docker-entrypoint-initdb.d
     networks:
       - sss-network
 
