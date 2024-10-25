@@ -1,3 +1,4 @@
+/*
 package com.streaming.settlement.system.apigateway.filter;
 
 import io.jsonwebtoken.Claims;
@@ -111,4 +112,4 @@ public class JwtFilter implements GlobalFilter {
     public String getIssuer(String token) {
         return getClaims(token).getIssuer();
     }
-}
+}*/
