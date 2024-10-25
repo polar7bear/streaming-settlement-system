@@ -33,4 +33,8 @@ public class StreamingViewLog {
     //@Column(name = "member_id", nullable = false) //비회원이 시청할 경우도 있기에 이 컬럼의 not null 유무를 true로 해야 될 것 같은데?
     @Column(name = "member_id")
     private Long memberId;
+
+    public void saveLastPlayTimeByPause(Integer time) {
+        this.lastPlayTime = time;
+    }
 }

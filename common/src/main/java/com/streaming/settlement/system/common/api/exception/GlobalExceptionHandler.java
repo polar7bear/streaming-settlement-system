@@ -6,6 +6,7 @@ import com.streaming.settlement.system.common.api.ApiResponse;
 import com.streaming.settlement.system.common.api.exception.member.DuplicateMemberException;
 import com.streaming.settlement.system.common.api.exception.member.WrongPasswordException;
 import com.streaming.settlement.system.common.api.exception.streaming.NotFoundStreamingException;
+import com.streaming.settlement.system.common.api.exception.streaming.NotFoundStreamingViewLogException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -35,4 +36,12 @@ public class GlobalExceptionHandler {
     public ApiError handleNotFoundStreamingException(NotFoundStreamingException e) {
         return new ApiError(ApiErrorType.NOT_FOUND, "404", "존재하지 않는 동영상 혹은 재생이 불가능한 동영상입니다.", e);
     }
+
+    @ResponseBody
+    @ExceptionHandler(value = {NotFoundStreamingViewLogException.class})
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleNotFoundStreamingViewLogException(NotFoundStreamingViewLogException e) {
+        return new ApiError(ApiErrorType.NOT_FOUND, "404", "시청 기록을 찾을 수 없습니다.", e);
+    }
+
 }
