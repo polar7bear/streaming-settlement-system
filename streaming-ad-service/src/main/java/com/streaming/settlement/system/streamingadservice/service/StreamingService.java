@@ -60,6 +60,6 @@ public class StreamingService {
 
     private boolean isAbusing(Long streamingId, String ipAddress) {
         LocalDateTime thirtySecondsAgo = LocalDateTime.now().minusSeconds(30);
-        return streamingViewLogRepository.existsByStreamingIdAndIpAddressAndViewdAtAfter(streamingId, ipAddress, thirtySecondsAgo);
+        return streamingViewLogRepository.existsByStreamingIdAndIpAddressAndViewedAtAfter(streamingId, ipAddress, thirtySecondsAgo);
     }
 }

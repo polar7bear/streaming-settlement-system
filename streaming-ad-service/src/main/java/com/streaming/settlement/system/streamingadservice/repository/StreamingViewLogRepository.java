@@ -9,5 +9,5 @@ import java.util.Optional;
 public interface StreamingViewLogRepository extends JpaRepository<StreamingViewLog, Long> {
     Optional<StreamingViewLog> findByMemberIdAndStreamingId(Long memberId, Long streamingId);
 
-    boolean existsByStreamingIdAndIpAddressAndViewdAtAfter(Long streamingId, String ipAddress, LocalDateTime thirtySecondsAgo);
+    boolean existsByStreamingIdAndIpAddressAndViewedAtAfter(Long streamingId, String ipAddress, LocalDateTime thirtySecondsAgo);
 }
