@@ -3,16 +3,17 @@ DATABASE IF NOT EXISTS `member-service-db`;
 CREATE
 DATABASE IF NOT EXISTS `streaming-ad-service-db`;
 
+use `streaming-ad-service-db`;
 
 -- Streaming 테이블에 동영상 데이터 삽입
-INSERT INTO Streaming (total_length, views, isSettled, acc_play_time, member_id)
+INSERT INTO streaming (total_length, views, isSettled, acc_play_time, member_id)
 VALUES (600, 100, FALSE, 300, 1), -- 10분 길이의 동영상
        (1200, 250, TRUE, 600, 2), -- 20분 길이의 동영상
        (1800, 50, FALSE, 900, 3);
 -- 30분 길이의 동영상
 
 -- Advertisement 테이블에 광고 데이터 삽입
-INSERT INTO Advertisement (ad_play_time, count, ad_revenue)
+INSERT INTO advertisement (ad_play_time, count, ad_revenue)
 VALUES (300, 10, 50.00),  -- 5분 시점 광고
        (600, 20, 100.00), -- 10분 시점 광고
        (900, 15, 75.00),  -- 15분 시점 광고
