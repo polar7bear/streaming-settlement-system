@@ -33,13 +33,16 @@ public class Streaming {
 
     private Long memberId;
 
-    @ManyToMany
+    @OneToMany(mappedBy = "streaming")
+    private List<StreamingAdMapping> streamingAdMappings;
+
+    /*@ManyToMany
     @JoinTable(
             name = "streaming_ad_mapping",
             joinColumns = @JoinColumn(name = "streaming_id"),
             inverseJoinColumns = @JoinColumn(name = "ad_id")
     )
-    private List<Advertisement> advertisements;
+    private List<Advertisement> advertisements;*/
 
 
     public void incrementViews() {

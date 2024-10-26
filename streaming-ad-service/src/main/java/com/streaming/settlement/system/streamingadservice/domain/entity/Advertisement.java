@@ -26,8 +26,11 @@ public class Advertisement {
     @Column(name = "ad_revenue")
     private BigDecimal adRevenue;
 
-    @ManyToMany(mappedBy = "advertisements")
-    private List<Streaming> streams;
+    @OneToMany(mappedBy = "advertisement")
+    private List<StreamingAdMapping> streamingAdMappings;
+
+    /*@ManyToMany(mappedBy = "advertisements")
+    private List<Streaming> streams;*/
 
     public void incrementCount() {
         this.count += 1;
