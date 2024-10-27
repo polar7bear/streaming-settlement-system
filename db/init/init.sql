@@ -3,7 +3,7 @@ DATABASE IF NOT EXISTS `member-service-db`;
 CREATE
 DATABASE IF NOT EXISTS `streaming-ad-service-db`;
 
-use `streaming-ad-service-db`;
+/*use `streaming-ad-service-db`;
 
 -- Streaming 테이블에 동영상 데이터 삽입
 INSERT INTO streaming (total_length, views, isSettled, acc_play_time, member_id)
@@ -41,4 +41,4 @@ VALUES (2, 1), -- 두 번째 동영상에 첫 번째 광고 (5분 시점)
 INSERT INTO streaming_ad_mapping (streaming_id, ad_id)
 VALUES (3, 4), -- 세 번째 동영상에 네 번째 광고 (5분 시점)
        (3, 5), -- 세 번째 동영상에 다섯 번째 광고 (10분 시점)
-       (3, 6); -- 세 번째 동영상에 여섯 번째 광고 (20분 시점)
+       (3, 6); -- 세 번째 동영상에 여섯 번째 광고 (20분 시점)*/

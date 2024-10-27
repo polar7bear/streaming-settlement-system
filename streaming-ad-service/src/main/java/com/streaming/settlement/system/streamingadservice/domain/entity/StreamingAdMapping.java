@@ -1,10 +1,13 @@
 package com.streaming.settlement.system.streamingadservice.domain.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "streaming_ad_mapping")
 public class StreamingAdMapping {
 
