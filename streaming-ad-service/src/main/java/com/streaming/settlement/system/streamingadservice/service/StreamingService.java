@@ -7,11 +7,13 @@ import com.streaming.settlement.system.streamingadservice.domain.entity.Streamin
 import com.streaming.settlement.system.streamingadservice.repository.StreamingRepository;
 import com.streaming.settlement.system.streamingadservice.repository.StreamingViewLogRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StreamingService {
@@ -27,32 +29,47 @@ public class StreamingService {
 
         boolean isAbuse = isAbusing(streamingId, ipAddress) || streamingEntity.getMemberId().equals(memberId);
 
-        Optional<StreamingViewLog> viewLog = streamingViewLogRepository.findByMemberIdAndStreamingId(memberId, streamingId);
+        Optional<StreamingViewLog> viewLog = Optional.empty();
+        if (memberId == null) {
+            viewLog = streamingViewLogRepository.findByIpAddressAndStreamingId(ipAddress, streamingId);
+        } else if (memberId != null) {
+            viewLog = streamingViewLogRepository.findByMemberIdAndStreamingId(memberId, streamingId);
+        }
         currentTime = (viewLog.isPresent()) ? viewLog.get().getLastPlayTime() : 0;
 
-        StreamingViewLog viewLogEntity = StreamingViewLog.builder()
-                .ipAddress(ipAddress)
-                .lastPlayTime(currentTime)
-                .viewedAt(LocalDateTime.now())
-                .streaming(streamingEntity)
-                .memberId(memberId)
-                .build();
-
-        streamingViewLogRepository.save(viewLogEntity);
-
-        advertisementService.processAdViews(streamingEntity, currentTime, memberId, ipAddress, isAbuse);
-
         if (!isAbuse) {
+            if (viewLog.isEmpty()) { //시청 기록이 없을경우에만 시청기록 생성
+                // 사용자가 영상을 중지하지않고 그냥 창을 꺼버릴 경우에는 마지막 재생시간을 어떻게 관리해야할지 고민해보자 (해당 페이지에서 다른 페이지로 이동하거나 윈도우가 꺼졌을 경우 특정 api를 서버로 요청?)
+                // 
+                StreamingViewLog viewLogEntity = StreamingViewLog.builder()
+                        .ipAddress(ipAddress)
+                        .lastPlayTime(currentTime)
+                        .viewedAt(LocalDateTime.now())
+                        .streaming(streamingEntity)
+                        .memberId(memberId)
+                        .build();
+
+                streamingViewLogRepository.save(viewLogEntity);
+            }
+
             streamingEntity.incrementViews(); // 조회수 1증가
             streamingRepository.save(streamingEntity);
         }
 
+        advertisementService.processAdViews(streamingEntity, currentTime, memberId, ipAddress, isAbuse);
+
         return currentTime;
     }
 
-    public void pauseStreaming(Long streamingId, Long memberId, Integer currentTime) {
-        StreamingViewLog streamingViewLogEntity = streamingViewLogRepository.findByMemberIdAndStreamingId(memberId, streamingId)
-                .orElseThrow(() -> new NotFoundStreamingViewLogException("시청 기록을 찾을 수 없습니다."));
+    public void pauseStreaming(Long streamingId, Long memberId, String ipAddress, Integer currentTime) {
+        StreamingViewLog streamingViewLogEntity = null;
+        if (memberId != null) {
+            streamingViewLogEntity = streamingViewLogRepository.findByMemberIdAndStreamingId(memberId, streamingId)
+                    .orElseThrow(() -> new NotFoundStreamingViewLogException("시청 기록을 찾을 수 없습니다."));
+        } else if (memberId == null) {
+            streamingViewLogEntity = streamingViewLogRepository.findByIpAddressAndStreamingId(ipAddress, streamingId)
+                    .orElseThrow(() -> new NotFoundStreamingViewLogException("시청 기록을 찾을 수 없습니다."));
+        }
 
         streamingViewLogEntity.saveLastPlayTimeByPause(currentTime);
         streamingViewLogRepository.save(streamingViewLogEntity);

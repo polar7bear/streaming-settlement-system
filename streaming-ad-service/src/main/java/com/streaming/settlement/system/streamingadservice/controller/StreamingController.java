@@ -27,9 +27,10 @@ public class StreamingController {
     @PostMapping("/pause/{streamingId}")
     public ApiResponse<Void> pauseStreaming(
             @PathVariable Long streamingId,
-            @RequestParam Long memberId,
-            @RequestParam Integer currentTime) {
-        streamingService.pauseStreaming(streamingId, memberId, currentTime);
+            @RequestHeader(value = "X-Member-Id", required = false) Long memberId,
+            @RequestParam Integer currentTime,
+            HttpServletRequest request) {
+        streamingService.pauseStreaming(streamingId, memberId, request.getRemoteAddr(), currentTime);
         return new ApiResponse<>("동영상이 중지되었습니다.");
     }
 }

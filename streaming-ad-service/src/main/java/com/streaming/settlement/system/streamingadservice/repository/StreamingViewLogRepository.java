@@ -10,4 +10,6 @@ public interface StreamingViewLogRepository extends JpaRepository<StreamingViewL
     Optional<StreamingViewLog> findByMemberIdAndStreamingId(Long memberId, Long streamingId);
 
     boolean existsByStreamingIdAndIpAddressAndViewedAtAfter(Long streamingId, String ipAddress, LocalDateTime thirtySecondsAgo);
+
+    Optional<StreamingViewLog> findByIpAddressAndStreamingId(String ipAddress, Long streamingId);
 }
