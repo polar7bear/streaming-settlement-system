@@ -49,6 +49,9 @@ services:
       dockerfile: docker/Dockerfile-gateway-server
       context: ./
     image: sss/api-gateway
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
     ports:
       - "8765:8765"
     restart: always

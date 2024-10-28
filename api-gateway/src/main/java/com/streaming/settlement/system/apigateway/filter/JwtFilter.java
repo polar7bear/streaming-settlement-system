@@ -1,4 +1,3 @@
-/*
 package com.streaming.settlement.system.apigateway.filter;
 
 import io.jsonwebtoken.Claims;
@@ -45,6 +44,12 @@ public class JwtFilter implements GlobalFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
+        // TODO: AbstractGatewayFilterFactory에 대해 알아보자
+        if (path.startsWith("/streams/")) {
+            return chain.filter(exchange);
+        }
+
         String token = resolveToken(exchange);
 
         if (token != null && validationToken(token)) {
@@ -112,4 +117,4 @@ public class JwtFilter implements GlobalFilter {
     public String getIssuer(String token) {
         return getClaims(token).getIssuer();
     }
-}*/
+}

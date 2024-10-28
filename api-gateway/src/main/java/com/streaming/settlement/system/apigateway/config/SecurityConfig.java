@@ -19,11 +19,15 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
+
                 .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers("/streams/**").permitAll()
                         .anyExchange().authenticated())
+
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler))
+
                 .build();
     }
 }
