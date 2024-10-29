@@ -1,0 +1,33 @@
+FROM openjdk:21-jdk-slim
+
+WORKDIR /app
+
+# Copy Gradle wrapper and other necessary files
+COPY gradlew /app/
+COPY gradle /app/gradle/
+COPY build.gradle /app/
+COPY settings.gradle /app/
+
+COPY common/build.gradle /app/common/
+COPY common/src /app/common/src
+
+COPY settlement-service/build.gradle /app/settlement-service/
+COPY settlement-service/src /app/settlement-service/src
+
+# Ensure gradlew is executable
+RUN chmod +x gradlew
+
+# Build the application
+RUN ./gradlew settlement-service:build -x test --stacktrace
+
+# Check the build output directory
+RUN ls -l settlement-service/build/libs/
+
+# Copy the built JAR file to /app.jar
+RUN cp settlement-service/build/libs/settlement-service-0.0.1-SNAPSHOT.jar /app.jar
+
+# Expose port
+EXPOSE 8200
+
+# Run the application
+CMD ["java", "-jar", "/app.jar"]

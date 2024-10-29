@@ -1,0 +1,4 @@
+rootProject.name = 'settlement-service'
+
+include 'settlement-service'
+include 'common'

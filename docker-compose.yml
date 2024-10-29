@@ -43,6 +43,27 @@ services:
       sss-database:
         condition: service_healthy
 
+  settlement-service:
+    container_name: settlement-service
+    build:
+      dockerfile: docker/Dockerfile-settlement-service
+      context: ./
+    image: sss/settlement-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://sss-database:3306/settlement-service-db
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+
+    ports:
+      - "8200:8200"
+    restart: always
+    networks:
+      - sss-network
+
+    depends_on:
+      sss-database:
+        condition: service_healthy
+
   api-gateway:
     container_name: api-gateway
     build:

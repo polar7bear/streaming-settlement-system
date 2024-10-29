@@ -3,6 +3,9 @@ DATABASE IF NOT EXISTS `member-service-db`;
 CREATE
 DATABASE IF NOT EXISTS `streaming-ad-service-db`;
 
+CREATE
+DATABASE IF NOT EXISTS `settlement-service-db`;
+
 /*use `streaming-ad-service-db`;
 
 -- Streaming 테이블에 동영상 데이터 삽입
