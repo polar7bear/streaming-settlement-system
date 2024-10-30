@@ -13,7 +13,7 @@ import java.util.Map;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 
-public class Stastics {
+public class Statistics {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
