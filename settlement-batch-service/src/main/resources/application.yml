@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: settlement-batch-service
+
+  profiles:
+    active: local
+
+  config:
+    import: optional:configserver:http://config-server:8888
+
+  cloud:
+    config:
+      profile: local
+      name: batch-service
+
+
+server:
+  port: 8300

@@ -14,6 +14,7 @@ spring:
             - member-service
             - streaming-service
             - settlement-service
+            - batch-service
           default-label: main
           ignore-local-ssh-settings: true
           private-key: ${private_key}

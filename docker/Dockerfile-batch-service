@@ -1,0 +1,33 @@
+FROM openjdk:21-jdk-slim
+
+WORKDIR /app
+
+# Copy Gradle wrapper and other necessary files
+COPY gradlew /app/
+COPY gradle /app/gradle/
+COPY build.gradle /app/
+COPY settings.gradle /app/
+
+COPY common/build.gradle /app/common/
+COPY common/src /app/common/src
+
+COPY settlement-batch-service/build.gradle /app/settlement-batch-service/
+COPY settlement-batch-service/src /app/settlement-batch-service/src
+
+# Ensure gradlew is executable
+RUN chmod +x gradlew
+
+# Build the application
+RUN ./gradlew settlement-batch-service:build -x test --stacktrace
+
+# Check the build output directory
+RUN ls -l settlement-batch-service/build/libs/
+
+# Copy the built JAR file to /app.jar
+RUN cp settlement-batch-service/build/libs/settlement-batch-service-0.0.1-SNAPSHOT.jar /app.jar
+
+# Expose port
+EXPOSE 8300
+
+# Run the application
+CMD ["java", "-jar", "/app.jar"]
