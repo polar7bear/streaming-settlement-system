@@ -1,5 +1,6 @@
 package com.streaming.settlement.system.streamingadservice.domain.entity;
 
+import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +11,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Streaming {
+public class Streaming extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
