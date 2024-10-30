@@ -27,7 +27,7 @@ RUN ls -l streaming-ad-service/build/libs/
 RUN cp streaming-ad-service/build/libs/streaming-ad-service-0.0.1-SNAPSHOT.jar /app.jar
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8100
 
 # Run the application
 CMD ["java", "-jar", "/app.jar"]

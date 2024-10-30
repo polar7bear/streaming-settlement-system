@@ -27,7 +27,7 @@ RUN ls -l member-service/build/libs/
 RUN cp member-service/build/libs/member-service-0.0.1-SNAPSHOT.jar /app.jar
 
 # Expose port
-EXPOSE 8500
+EXPOSE 8000
 
 # Run the application
 CMD ["java", "-jar", "/app.jar"]

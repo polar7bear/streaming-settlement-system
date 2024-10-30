@@ -14,4 +14,4 @@ spring:
       name: member-service
 
 server:
-  port: 8500
+  port: 8000
