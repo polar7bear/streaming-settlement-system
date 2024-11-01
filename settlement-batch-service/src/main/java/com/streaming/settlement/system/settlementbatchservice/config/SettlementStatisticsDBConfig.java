@@ -34,6 +34,10 @@ public class SettlementStatisticsDBConfig {
         em.setPackagesToScan("com.streaming.settlement.system.settlementbatchservice.domain.entity.settlement");
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         em.setJpaPropertyMap(new HashMap<>() {{
+            put("hibernate.physical_naming_strategy",
+                    "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
+            put("hibernate.implicit_naming_strategy",
+                    "org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy");
             put("hibernate.hbm2ddl.auto", "none");
             put("hibernate.show_sql", "true");
         }});
