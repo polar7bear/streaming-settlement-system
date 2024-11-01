@@ -12,6 +12,8 @@ spring:
     config:
       profile: local
       name: batch-service
+  jpa:
+    open-in-view: false
 
 
 server:
