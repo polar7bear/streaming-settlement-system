@@ -1,10 +1,10 @@
 package com.streaming.settlement.system.settlementbatchservice;
 
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-//@EnableBatchProcessing 스프링부트 3.x 버전 이상에서는 비활성화
+@EnableScheduling
 @SpringBootApplication
 public class SettlementBatchServiceApplication {
 
