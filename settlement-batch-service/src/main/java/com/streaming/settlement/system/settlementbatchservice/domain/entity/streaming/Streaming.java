@@ -8,6 +8,7 @@ import lombok.*;
 @Entity
 @Builder
 @AllArgsConstructor
+@Table(name = "streaming")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Streaming extends BaseTimeEntity {
 
