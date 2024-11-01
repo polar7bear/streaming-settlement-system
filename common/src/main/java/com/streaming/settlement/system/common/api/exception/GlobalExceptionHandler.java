@@ -3,6 +3,7 @@ package com.streaming.settlement.system.common.api.exception;
 import com.streaming.settlement.system.common.api.ApiError;
 import com.streaming.settlement.system.common.api.ApiErrorType;
 import com.streaming.settlement.system.common.api.ApiResponse;
+import com.streaming.settlement.system.common.api.exception.batch.BatchJobException;
 import com.streaming.settlement.system.common.api.exception.member.DuplicateMemberException;
 import com.streaming.settlement.system.common.api.exception.member.WrongPasswordException;
 import com.streaming.settlement.system.common.api.exception.streaming.NotFoundStreamingException;
@@ -42,6 +43,13 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiError handleNotFoundStreamingViewLogException(NotFoundStreamingViewLogException e) {
         return new ApiError(ApiErrorType.NOT_FOUND, "404", "시청 기록을 찾을 수 없습니다.", e);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(value = {BatchJobException.class})
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError BatchJobException(BatchJobException e) {
+        return new ApiError(ApiErrorType.NOT_FOUND, "404", "찾을 수 없는 Job 입니다.", e);
     }
 
 }
