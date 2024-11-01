@@ -25,11 +25,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.DAILY_JOB;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.WEEKLY_JOB;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Parameter.END_DATE;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Parameter.START_DATE;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Query.TOP_PLAY_TIME_QUERY;
@@ -37,13 +39,12 @@ import static com.streaming.settlement.system.settlementbatchservice.batch.Batch
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.QueryMethod.SAVE;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Reader.TOP_PLAY_TIME_READER;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Reader.TOP_VIEW_READER;
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Step.DAILY_TOP_PLAY_TIME_STEP;
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Step.DAILY_TOP_VIEW_STEP;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Step.*;
 import static java.util.Objects.requireNonNull;
 
 @Slf4j
 @Configuration
-public class DailyStatisticsJob {
+public class WeeklyStatisticsJob {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
@@ -53,7 +54,7 @@ public class DailyStatisticsJob {
 
     private final LocalContainerEntityManagerFactoryBean entityManagerFactoryBean;
 
-    public DailyStatisticsJob(JobRepository jobRepository, PlatformTransactionManager transactionManager, TopStreamingStatisticsRepository topStreamingStatisticsRepository, StatisticsSummaryRepository statisticsSummaryRepository, @Qualifier("streamingAdEntityManager") LocalContainerEntityManagerFactoryBean entityManagerFactoryBean) {
+    public WeeklyStatisticsJob(JobRepository jobRepository, PlatformTransactionManager transactionManager, TopStreamingStatisticsRepository topStreamingStatisticsRepository, StatisticsSummaryRepository statisticsSummaryRepository, @Qualifier("streamingAdEntityManager") LocalContainerEntityManagerFactoryBean entityManagerFactoryBean) {
         this.jobRepository = jobRepository;
         this.transactionManager = transactionManager;
         this.topStreamingStatisticsRepository = topStreamingStatisticsRepository;
@@ -62,35 +63,33 @@ public class DailyStatisticsJob {
     }
 
 
-    // 일별 통계
     @Bean
-    public Job dailyJob() {
-        return new JobBuilder(DAILY_JOB, jobRepository)
-                .start(dailyTop5ViewStep())
-                .next(dailyTop5PlayTimeStep())
+    public Job weeklyJob() {
+        return new JobBuilder(WEEKLY_JOB, jobRepository)
+                .start(weeklyTop5ViewStep())
+                .next(weeklyTop5PlayTimeStep())
                 .build();
     }
 
-    // 조회수 top5
     @Bean
-    public Step dailyTop5ViewStep() {
-        return new StepBuilder(DAILY_TOP_VIEW_STEP, jobRepository)
+    public Step weeklyTop5ViewStep() {
+        return new StepBuilder(WEEKLY_TOP_VIEW_STEP, jobRepository)
                 .<Streaming, TopStreamingStatistics>chunk(5, transactionManager)
-                .reader(dailyTop5ViewReader(entityManagerFactoryBean))
-                .processor(dailyTop5ViewProcessor())
-                .writer(dailyTop5ViewWriter())
+                .reader(weeklyTop5ViewReader(entityManagerFactoryBean))
+                .processor(weeklyTop5ViewProcessor())
+                .writer(weeklyTop5ViewWriter())
                 .build();
     }
 
     @Bean
-    public JpaCursorItemReader<Streaming> dailyTop5ViewReader(@Qualifier("streamingAdEntityManager") LocalContainerEntityManagerFactoryBean entityManagerFactoryBean) {
+    public JpaCursorItemReader<Streaming> weeklyTop5ViewReader(@Qualifier("streamingAdEntityManager") LocalContainerEntityManagerFactoryBean entityManagerFactoryBean) {
         return new JpaCursorItemReaderBuilder<Streaming>()
                 .name(TOP_VIEW_READER)
                 .entityManagerFactory(requireNonNull(entityManagerFactoryBean.getObject()))
                 .queryString(TOP_VIEWS_QUERY)
                 .parameterValues(Map.of(
-                        START_DATE, LocalDate.now().minusDays(1).atStartOfDay(),
-                        END_DATE, LocalDate.now().atStartOfDay()
+                        START_DATE, LocalDate.now().minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay(),
+                        END_DATE, LocalDate.now().minusWeeks(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).plusDays(1).atStartOfDay()
                 ))
                 .maxItemCount(5)
                 .build();
@@ -98,16 +97,16 @@ public class DailyStatisticsJob {
 
     @Bean
     @StepScope
-    public ItemProcessor<Streaming, TopStreamingStatistics> dailyTop5ViewProcessor() {
+    public ItemProcessor<Streaming, TopStreamingStatistics> weeklyTop5ViewProcessor() {
         AtomicInteger rank = new AtomicInteger(0);
 
         return streaming -> {
-            StatisticsSummary summary = statisticsSummaryRepository.findByDateRangeAndTargetDate(DateRange.DAILY, LocalDate.now().minusDays(1))
+            StatisticsSummary summary = statisticsSummaryRepository.findByDateRangeAndTargetDate(DateRange.WEEKLY, LocalDate.now().minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
                     .orElseGet(() ->
                             statisticsSummaryRepository.save(
                                     StatisticsSummary.builder()
-                                            .dateRange(DateRange.DAILY)
-                                            .targetDate(LocalDate.now().minusDays(1))
+                                            .dateRange(DateRange.WEEKLY)
+                                            .targetDate(LocalDate.now().minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
                                             .build()
                             ));
 
@@ -123,34 +122,32 @@ public class DailyStatisticsJob {
     }
 
     @Bean
-    public RepositoryItemWriter<TopStreamingStatistics> dailyTop5ViewWriter() {
+    public RepositoryItemWriter<TopStreamingStatistics> weeklyTop5ViewWriter() {
         return new RepositoryItemWriterBuilder<TopStreamingStatistics>()
                 .repository(topStreamingStatisticsRepository)
                 .methodName(SAVE)
                 .build();
     }
 
-
-    // 누적 재생시간 탑5
     @Bean
-    public Step dailyTop5PlayTimeStep() {
-        return new StepBuilder(DAILY_TOP_PLAY_TIME_STEP, jobRepository)
+    public Step weeklyTop5PlayTimeStep() {
+        return new StepBuilder(WEEKLY_TOP_PLAY_TIME_STEP, jobRepository)
                 .<Streaming, TopStreamingStatistics>chunk(5, transactionManager)
-                .reader(dailyTop5PlayTimeReader(entityManagerFactoryBean))
-                .processor(dailyTop5PlayTimeProcessor())
-                .writer(dailyTop5PlayTimeWriter())
+                .reader(weeklyTop5PlayTimeReader(entityManagerFactoryBean))
+                .processor(weeklyTop5PlayTimeProcessor())
+                .writer(weeklyTop5PlayTimeWriter())
                 .build();
     }
 
     @Bean
-    public JpaCursorItemReader<Streaming> dailyTop5PlayTimeReader(@Qualifier("streamingAdEntityManager") LocalContainerEntityManagerFactoryBean entityManagerFactoryBean) {
+    public JpaCursorItemReader<Streaming> weeklyTop5PlayTimeReader(@Qualifier("streamingAdEntityManager") LocalContainerEntityManagerFactoryBean entityManagerFactoryBean) {
         return new JpaCursorItemReaderBuilder<Streaming>()
                 .name(TOP_PLAY_TIME_READER)
                 .entityManagerFactory(requireNonNull(entityManagerFactoryBean.getObject()))
                 .queryString(TOP_PLAY_TIME_QUERY)
                 .parameterValues(Map.of(
-                        START_DATE, LocalDate.now().minusDays(1).atStartOfDay(),
-                        END_DATE, LocalDate.now().atStartOfDay()
+                        START_DATE, LocalDate.now().minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay(),
+                        END_DATE, LocalDate.now().minusWeeks(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).plusDays(1).atStartOfDay()
                 ))
                 .maxItemCount(5)
                 .build();
@@ -158,16 +155,16 @@ public class DailyStatisticsJob {
 
     @Bean
     @StepScope
-    public ItemProcessor<Streaming, TopStreamingStatistics> dailyTop5PlayTimeProcessor() {
+    public ItemProcessor<Streaming, TopStreamingStatistics> weeklyTop5PlayTimeProcessor() {
         AtomicInteger rank = new AtomicInteger(0);
 
         return streaming -> {
-            StatisticsSummary summary = statisticsSummaryRepository.findByDateRangeAndTargetDate(DateRange.DAILY, LocalDate.now().minusDays(1))
+            StatisticsSummary summary = statisticsSummaryRepository.findByDateRangeAndTargetDate(DateRange.WEEKLY, LocalDate.now().minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
                     .orElseGet(() ->
                             statisticsSummaryRepository.save(
                                     StatisticsSummary.builder()
-                                            .dateRange(DateRange.DAILY)
-                                            .targetDate(LocalDate.now().minusDays(1))
+                                            .dateRange(DateRange.WEEKLY)
+                                            .targetDate(LocalDate.now().minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
                                             .build()
                             ));
 
@@ -183,7 +180,7 @@ public class DailyStatisticsJob {
     }
 
     @Bean
-    public RepositoryItemWriter<TopStreamingStatistics> dailyTop5PlayTimeWriter() {
+    public RepositoryItemWriter<TopStreamingStatistics> weeklyTop5PlayTimeWriter() {
         return new RepositoryItemWriterBuilder<TopStreamingStatistics>()
                 .repository(topStreamingStatisticsRepository)
                 .methodName(SAVE)
