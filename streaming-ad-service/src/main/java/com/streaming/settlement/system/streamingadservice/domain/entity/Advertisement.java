@@ -29,8 +29,6 @@ public class Advertisement {
     @OneToMany(mappedBy = "advertisement")
     private List<StreamingAdMapping> streamingAdMappings;
 
-    /*@ManyToMany(mappedBy = "advertisements")
-    private List<Streaming> streams;*/
 
     public void incrementCount() {
         this.count += 1;

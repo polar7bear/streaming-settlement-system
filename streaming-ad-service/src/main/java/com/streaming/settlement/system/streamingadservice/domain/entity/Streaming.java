@@ -23,9 +23,6 @@ public class Streaming extends BaseTimeEntity {
     @Column(nullable = false)
     private Long views = 0L;
 
-    /*@Column(name = "last_play_time", nullable = false)
-    private Integer LastPlayTime;*/
-
     @Column(nullable = false)
     private Boolean isSettled = false;
 
@@ -36,14 +33,6 @@ public class Streaming extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "streaming")
     private List<StreamingAdMapping> streamingAdMappings;
-
-    /*@ManyToMany
-    @JoinTable(
-            name = "streaming_ad_mapping",
-            joinColumns = @JoinColumn(name = "streaming_id"),
-            inverseJoinColumns = @JoinColumn(name = "ad_id")
-    )
-    private List<Advertisement> advertisements;*/
 
 
     public void incrementViews() {
