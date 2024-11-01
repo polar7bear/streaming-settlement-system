@@ -10,7 +10,7 @@ public final class BatchConstant {
     public static final class Job {
         public static final String DAILY_JOB = "dailyJob";
         public static final String WEEKLY_JOB = "weeklyJob";
-        public static final String MONTHLY_JOB = "weeklyJob";
+        public static final String MONTHLY_JOB = "monthlyJob";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
