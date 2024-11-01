@@ -1,6 +1,7 @@
 package com.streaming.settlement.system.settlementbatchservice.batch.scheduler;
 
 import com.streaming.settlement.system.common.api.exception.batch.BatchJobException;
+import com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.*;
@@ -21,13 +22,22 @@ public class DailyStatisticsScheduler {
     private final JobLauncher jobLauncher;
     private final JobRegistry jobRegistry;
 
-    private final static String DAILY_JOB = "dailyJob";
     private final static String STR_DATE = "date";
     private final static String STR_TIME = "time";
 
-    @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
-    public void dailyTop5ViewJob() {
-        executeJob(DAILY_JOB);
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void dailyTop5Job() {
+        executeJob(BatchConstant.Job.DAILY_JOB);
+    }
+
+    @Scheduled(cron = "0 0 0 * * MON", zone = "Asia/Seoul")
+    public void weeklyTop5Job() {
+        executeJob(BatchConstant.Job.WEEKLY_JOB);
+    }
+
+    @Scheduled(cron = "0 0 0 1 * *", zone = "Asia/Seoul")
+    public void monthlyTop5Job() {
+        executeJob(BatchConstant.Job.MONTHLY_JOB);
     }
 
 
@@ -40,7 +50,6 @@ public class DailyStatisticsScheduler {
             log.error("JobRegistry에 등록된 Job이 아닙니다: {}", jobName, e);
             throw new BatchJobException("찾을 수 없는 Job: " + jobName, e);
         }
-
     }
 
     private void runJob(Job job, String jobName) {
