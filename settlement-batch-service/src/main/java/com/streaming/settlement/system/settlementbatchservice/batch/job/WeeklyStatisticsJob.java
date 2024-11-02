@@ -132,7 +132,7 @@ public class WeeklyStatisticsJob {
     @Bean
     public Step weeklyTop5PlayTimeStep() {
         return new StepBuilder(WEEKLY_TOP_PLAY_TIME_STEP, jobRepository)
-                .<Streaming, TopStreamingStatistics>chunk(5, transactionManager)
+                .<Streaming, TopStreamingStatistics>chunk(1, transactionManager)
                 .reader(weeklyTop5PlayTimeReader(entityManagerFactoryBean))
                 .processor(weeklyTop5PlayTimeProcessor())
                 .writer(weeklyTop5PlayTimeWriter())

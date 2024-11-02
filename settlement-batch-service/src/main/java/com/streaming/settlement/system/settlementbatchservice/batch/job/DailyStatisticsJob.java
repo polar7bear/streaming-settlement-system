@@ -75,7 +75,7 @@ public class DailyStatisticsJob {
     @Bean
     public Step dailyTop5ViewStep() {
         return new StepBuilder(DAILY_TOP_VIEW_STEP, jobRepository)
-                .<Streaming, TopStreamingStatistics>chunk(5, transactionManager)
+                .<Streaming, TopStreamingStatistics>chunk(1, transactionManager)
                 .reader(dailyTop5ViewReader(entityManagerFactoryBean))
                 .processor(dailyTop5ViewProcessor())
                 .writer(dailyTop5ViewWriter())

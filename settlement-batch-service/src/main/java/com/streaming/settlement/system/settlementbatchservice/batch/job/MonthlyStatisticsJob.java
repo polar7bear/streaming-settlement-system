@@ -72,7 +72,7 @@ public class MonthlyStatisticsJob {
     @Bean
     public Step monthlyTop5ViewStep() {
         return new StepBuilder(MONTHLY_TOP_VIEW_STEP, jobRepository)
-                .<Streaming, TopStreamingStatistics>chunk(5, transactionManager)
+                .<Streaming, TopStreamingStatistics>chunk(1, transactionManager)
                 .reader(monthlyTop5ViewReader(entityManagerFactoryBean))
                 .processor(monthlyTop5ViewProcessor())
                 .writer(monthlyTop5ViewWriter())
