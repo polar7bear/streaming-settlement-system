@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class DailyStatisticsScheduler {
+public class BatchScheduler {
 
     private final JobLauncher jobLauncher;
     private final JobRegistry jobRegistry;
@@ -25,17 +25,20 @@ public class DailyStatisticsScheduler {
     private final static String STR_DATE = "date";
     private final static String STR_TIME = "time";
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    //@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void dailyTop5Job() {
         executeJob(BatchConstant.Job.DAILY_JOB);
     }
 
-    @Scheduled(cron = "0 0 0 * * MON", zone = "Asia/Seoul")
+    //@Scheduled(cron = "0 0 0 * * MON", zone = "Asia/Seoul")
+    @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void weeklyTop5Job() {
         executeJob(BatchConstant.Job.WEEKLY_JOB);
     }
 
-    @Scheduled(cron = "0 0 0 1 * *", zone = "Asia/Seoul")
+    //@Scheduled(cron = "0 0 0 1 * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void monthlyTop5Job() {
         executeJob(BatchConstant.Job.MONTHLY_JOB);
     }
