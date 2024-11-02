@@ -1,13 +1,12 @@
-package com.streaming.settlement.system.settlementservice.domain.entity;
+package com.streaming.settlement.system.settlementbatchservice.domain.entity.settlement;
 
 import com.streaming.settlement.system.common.entity.BaseTimeEntity;
-import com.streaming.settlement.system.settlementservice.domain.enums.Status;
+import com.streaming.settlement.system.settlementbatchservice.domain.enums.Status;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -37,3 +36,4 @@ public class Settlement extends BaseTimeEntity {
     private Long streamingId;
 
 }
+

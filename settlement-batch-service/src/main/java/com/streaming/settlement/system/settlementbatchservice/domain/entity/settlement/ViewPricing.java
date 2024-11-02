@@ -1,4 +1,4 @@
-package com.streaming.settlement.system.settlementservice.domain.entity;
+package com.streaming.settlement.system.settlementbatchservice.domain.entity.settlement;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
