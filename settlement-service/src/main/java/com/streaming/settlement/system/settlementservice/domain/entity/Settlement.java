@@ -24,7 +24,10 @@ public class Settlement extends BaseTimeEntity {
     private BigDecimal adRevenue;
 
     @Column(nullable = false)
-    private BigDecimal amount;
+    private BigDecimal totalRevenue;
+
+    @Column(nullable = false)
+    private Long views;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)

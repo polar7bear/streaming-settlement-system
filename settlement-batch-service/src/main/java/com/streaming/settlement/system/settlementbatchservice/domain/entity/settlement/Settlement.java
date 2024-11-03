@@ -3,12 +3,15 @@ package com.streaming.settlement.system.settlementbatchservice.domain.entity.set
 import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import com.streaming.settlement.system.settlementbatchservice.domain.enums.Status;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
+@Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Settlement extends BaseTimeEntity {
 
@@ -23,11 +26,16 @@ public class Settlement extends BaseTimeEntity {
     private BigDecimal adRevenue;
 
     @Column(nullable = false)
-    private BigDecimal amount;
+    private BigDecimal totalRevenue;
+
+    @Column(nullable = false)
+    private Long views;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Status status;
+
+    private LocalDate settlementDate;
 
     @Column(nullable = false)
     private Long memberId;
