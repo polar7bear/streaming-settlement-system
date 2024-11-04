@@ -14,6 +14,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.*;
+
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
@@ -28,19 +30,25 @@ public class BatchScheduler {
     //@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void dailyTop5Job() {
-        executeJob(BatchConstant.Job.DAILY_JOB);
+        executeJob(DAILY_JOB);
     }
 
     //@Scheduled(cron = "0 0 0 * * MON", zone = "Asia/Seoul")
     @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void weeklyTop5Job() {
-        executeJob(BatchConstant.Job.WEEKLY_JOB);
+        executeJob(WEEKLY_JOB);
     }
 
     //@Scheduled(cron = "0 0 0 1 * *", zone = "Asia/Seoul")
     @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void monthlyTop5Job() {
-        executeJob(BatchConstant.Job.MONTHLY_JOB);
+        executeJob(MONTHLY_JOB);
+    }
+
+    //@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
+    public void settlementJob() {
+        executeJob(SETTLEMENT_JOB);
     }
 
 
