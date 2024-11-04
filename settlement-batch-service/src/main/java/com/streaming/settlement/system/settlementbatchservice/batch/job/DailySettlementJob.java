@@ -18,11 +18,11 @@ import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
 import org.springframework.batch.item.data.builder.RepositoryItemWriterBuilder;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
@@ -42,7 +42,7 @@ import static com.streaming.settlement.system.settlementbatchservice.batch.Batch
 
 @Configuration
 @RequiredArgsConstructor
-public class SettlementJob {
+public class DailySettlementJob {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
