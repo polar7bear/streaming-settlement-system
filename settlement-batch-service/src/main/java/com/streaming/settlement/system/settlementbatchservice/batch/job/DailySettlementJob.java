@@ -3,9 +3,11 @@ package com.streaming.settlement.system.settlementbatchservice.batch.job;
 import com.streaming.settlement.system.settlementbatchservice.domain.entity.settlement.Settlement;
 import com.streaming.settlement.system.settlementbatchservice.domain.entity.settlement.ViewPricing;
 import com.streaming.settlement.system.settlementbatchservice.domain.entity.streaming.Streaming;
+import com.streaming.settlement.system.settlementbatchservice.domain.entity.streaming.StreamingAdMapping;
 import com.streaming.settlement.system.settlementbatchservice.domain.enums.Status;
 import com.streaming.settlement.system.settlementbatchservice.repository.settlement.SettlementRepository;
 import com.streaming.settlement.system.settlementbatchservice.repository.settlement.ViewPricingRepository;
+import com.streaming.settlement.system.settlementbatchservice.repository.streaming.StreamingAdMappingRepository;
 import com.streaming.settlement.system.settlementbatchservice.repository.streaming.StreamingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
@@ -20,23 +22,18 @@ import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
 import org.springframework.batch.item.data.builder.RepositoryItemWriterBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
 
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.SETTLEMENT_JOB;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Parameter.ID;
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.QueryMethod.FIND_BY_CREATED_AT_BETWEEN;
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.QueryMethod.SAVE;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.QueryMethod.*;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Reader.SETTLEMENT_READER;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Step.SETTLEMENT_STEP;
 
@@ -50,6 +47,7 @@ public class DailySettlementJob {
     private final StreamingRepository streamingRepository;
     private final SettlementRepository settlementRepository;
     private final ViewPricingRepository viewPricingRepository;
+    private final StreamingAdMappingRepository streamingAdMappingRepository;
 
 
     @Bean
@@ -74,11 +72,8 @@ public class DailySettlementJob {
         return new RepositoryItemReaderBuilder<Streaming>()
                 .name(SETTLEMENT_READER)
                 .repository(streamingRepository)
-                .methodName(FIND_BY_CREATED_AT_BETWEEN)
-                .arguments(
-                        LocalDate.now().minusDays(1).atStartOfDay(),
-                        LocalDate.now().atStartOfDay()
-                )
+                .methodName(FIND_ALL)
+
                 .pageSize(100)
                 .sorts(Map.of(ID, Sort.Direction.ASC))
                 .build();
@@ -86,34 +81,62 @@ public class DailySettlementJob {
 
     @Bean
     public ItemProcessor<Streaming, Settlement> settlementProcessor() {
-        return new ItemProcessor<Streaming, Settlement>() {
-            @Override
-            public Settlement process(Streaming item) throws Exception {
-                Optional<Settlement> prevSettlement = settlementRepository.findTopByStreamingIdOrderByCreatedAtDesc(item.getId());
-                Long prevViews = prevSettlement
-                        .map(Settlement::getViews)
-                        .orElse(0L);
+        return item -> {
+            LocalDateTime startDate = LocalDate.now().minusDays(1).atStartOfDay();
+            LocalDateTime endDate = LocalDate.now().atStartOfDay();
 
-                Long todayViews = item.getViews() - prevViews;
+            // 이전 정산 내역 조회
+            Optional<Settlement> prevSettlement = settlementRepository
+                    .findTopByStreamingIdOrderBySettlementEndDateDesc(item.getId());
 
-                BigDecimal streamingRevenue = calculateStreamRevenue(prevViews, todayViews);
-                int adCount = calculateAdCount(item.getTotalLength());
-                BigDecimal adRevenue = calculateAdRevenue(prevViews, todayViews, adCount);
+            Long prevViews = prevSettlement
+                    .map(Settlement::getStreamingViews)
+                    .orElse(0L);
 
-                BigDecimal totalRevenue = streamingRevenue.add(adRevenue)
-                        .setScale(0, RoundingMode.FLOOR);
+            Long todayViews = item.getViews() - prevViews;
 
-                return Settlement.builder()
-                        .streamingRevenue(streamingRevenue)
-                        .adRevenue(adRevenue)
-                        .totalRevenue(totalRevenue)
-                        .views(item.getViews())
-                        .status(Status.PENDING)
-                        .settlementDate(LocalDate.now().minusDays(1))
-                        .memberId(item.getMemberId())
-                        .streamingId(item.getId())
-                        .build();
-            }
+            // 스트리밍 수익 계산
+            BigDecimal streamingRevenue = calculateStreamRevenue(prevViews, todayViews);
+
+            // 광고 수익 계산 및 조회수 추적
+            AdRevenueResult adResult = calculateAdRevenue(item.getId(), prevSettlement);
+
+            BigDecimal totalRevenue = streamingRevenue.add(adResult.revenue())
+                    .setScale(0, RoundingMode.FLOOR);
+
+            // 현재 정산 기간에 대한 정산 내역이 있는지 확인
+            Optional<Settlement> existingSettlement = settlementRepository
+                    .findByStreamingIdAndSettlementStartDateAndSettlementEndDate(
+                            item.getId(), startDate, endDate
+                    );
+
+            return existingSettlement
+                    .map(settlement -> {
+                        // 기존 정산 내역 업데이트
+                        settlement.updateRevenue(
+                                streamingRevenue,
+                                adResult.revenue(),
+                                totalRevenue,
+                                item.getViews(),
+                                adResult.adViews()
+                        );
+                        return settlement;
+                    })
+                    .orElseGet(() ->
+                            Settlement.builder()
+                                    .streamingRevenue(streamingRevenue)
+                                    .adRevenue(adResult.revenue())
+                                    .totalRevenue(totalRevenue)
+                                    .streamingViews(item.getViews())
+                                    .adViews(adResult.adViews())
+                                    .status(Status.PENDING)
+                                    .settlementDate(LocalDate.now().minusDays(1))
+                                    .settlementStartDate(startDate)
+                                    .settlementEndDate(endDate)
+                                    .memberId(item.getMemberId())
+                                    .streamingId(item.getId())
+                                    .build()
+                    );
         };
     }
 
@@ -125,66 +148,98 @@ public class DailySettlementJob {
                 .build();
     }
 
+    private record AdRevenueResult(BigDecimal revenue, Map<Long, Long> adViews) {}
+
     private BigDecimal calculateStreamRevenue(Long prevViews, Long todayViews) {
         BigDecimal revenue = BigDecimal.ZERO;
-        List<ViewPricing> pricingList = viewPricingRepository.findAll() // TODO: 캐싱 고려
+        List<ViewPricing> pricingList = viewPricingRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(ViewPricing::getMinViews))
                 .toList();
 
-        long currentViews = prevViews;
+        long totalViews = prevViews + todayViews;
+        long processedViews = prevViews;
         long remainingViews = todayViews;
 
         for (ViewPricing pricing : pricingList) {
             if (remainingViews <= 0) break;
 
+            long minViews = pricing.getMinViews();
+            long maxViews = pricing.getMaxViews() != null ? pricing.getMaxViews() : Long.MAX_VALUE;
+
+            if (processedViews >= maxViews) continue;
+
             long viewsInRange;
-            if (pricing.getMaxViews() == null) {
-                viewsInRange = remainingViews;
+            if (processedViews < minViews) {
+                viewsInRange = Math.min(remainingViews, maxViews - minViews);
             } else {
-                viewsInRange = Math.min(remainingViews, pricing.getMaxViews() - currentViews);
+                viewsInRange = Math.min(remainingViews, maxViews - processedViews);
             }
 
             if (viewsInRange > 0) {
                 revenue = revenue.add(new BigDecimal(viewsInRange).multiply(pricing.getStreamRate()));
-                currentViews += viewsInRange;
+                processedViews += viewsInRange;
                 remainingViews -= viewsInRange;
             }
         }
         return revenue;
     }
 
-    private BigDecimal calculateAdRevenue(Long previousViews, Long todayViews, int adCount) {
+    private AdRevenueResult calculateAdRevenue(Long streamingId, Optional<Settlement> prevSettlement) {
+        List<StreamingAdMapping> adMappings = streamingAdMappingRepository.findByStreamingId(streamingId);
+        BigDecimal totalAdRevenue = BigDecimal.ZERO;
+        Map<Long, Long> currentAdViews = new HashMap<>();
+
+        for (StreamingAdMapping mapping : adMappings) {
+            long currentViews = mapping.getViews();
+            currentAdViews.put(mapping.getId(), currentViews);
+
+            long prevViews = prevSettlement
+                    .flatMap(s -> Optional.ofNullable(s.getAdViews().get(mapping.getId())))
+                    .orElse(0L);
+
+            long todayViews = currentViews - prevViews;
+
+            BigDecimal adRevenue = calculateAdRevenueForViews(prevViews, todayViews);
+            totalAdRevenue = totalAdRevenue.add(adRevenue);
+        }
+
+        return new AdRevenueResult(totalAdRevenue, currentAdViews);
+    }
+
+    private BigDecimal calculateAdRevenueForViews(long prevViews, long todayViews) {
         BigDecimal revenue = BigDecimal.ZERO;
         List<ViewPricing> pricings = viewPricingRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(ViewPricing::getMinViews))
                 .toList();
 
-        long currentViews = previousViews;
+        long totalViews = prevViews + todayViews;
+        long processedViews = prevViews;
         long remainingViews = todayViews;
 
         for (ViewPricing pricing : pricings) {
             if (remainingViews <= 0) break;
 
+            long minViews = pricing.getMinViews();
+            long maxViews = pricing.getMaxViews() != null ? pricing.getMaxViews() : Long.MAX_VALUE;
+
+            if (processedViews >= maxViews) continue;
+
             long viewsInRange;
-            if (pricing.getMaxViews() == null) {
-                viewsInRange = remainingViews;
+            if (processedViews < minViews) {
+                viewsInRange = Math.min(remainingViews, maxViews - minViews);
             } else {
-                viewsInRange = Math.min(remainingViews, pricing.getMaxViews() - currentViews);
+                viewsInRange = Math.min(remainingViews, maxViews - processedViews);
             }
 
             if (viewsInRange > 0) {
-                revenue = revenue.add(new BigDecimal(viewsInRange).multiply(pricing.getAdRate()).multiply(BigDecimal.valueOf(adCount)));
-                currentViews += viewsInRange;
+                revenue = revenue.add(new BigDecimal(viewsInRange).multiply(pricing.getAdRate()));
+                processedViews += viewsInRange;
                 remainingViews -= viewsInRange;
             }
         }
-
         return revenue;
     }
 
-    private int calculateAdCount(int totalLength) {
-        return (totalLength / 300) + (totalLength % 300 > 0 ? 1 : 0);
-    }
 }
