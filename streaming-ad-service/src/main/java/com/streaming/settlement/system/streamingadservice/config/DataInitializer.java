@@ -7,116 +7,138 @@ import com.streaming.settlement.system.streamingadservice.repository.Advertiseme
 import com.streaming.settlement.system.streamingadservice.repository.StreamingAdMappingRepository;
 import com.streaming.settlement.system.streamingadservice.repository.StreamingRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final StreamingRepository streamingRepository;
-    private final AdvertisementRepository advertisementRepository;
-    private final StreamingAdMappingRepository streamingAdMappingRepository;
+    private final JdbcTemplate jdbcTemplate;
+    private final Random random = new Random();
+    private static final LocalDateTime BASE_DATE = LocalDateTime.of(2024, 11, 4, 0, 0);
+
+    private static final int STREAMING_COUNT = 50;
+    private static final int AD_COUNT = 100;
 
     @Override
-    public void run(String... args) throws Exception {
-        Streaming streaming1 = Streaming.builder()
-                .totalLength(600)
-                .views(100L)
-                .isSettled(false)
-                .accPlayTime(300)
-                .memberId(1L)
-                .build();
-        Streaming streaming2 = Streaming.builder()
-                .totalLength(1200)
-                .views(250L)
-                .isSettled(true)
-                .accPlayTime(600)
-                .memberId(2L)
-                .build();
-        Streaming streaming3 = Streaming.builder()
-                .totalLength(1800)
-                .views(50L)
-                .isSettled(false)
-                .accPlayTime(900)
-                .memberId(3L)
-                .build();
-        streamingRepository.save(streaming1);
-        streamingRepository.save(streaming2);
-        streamingRepository.save(streaming3);
-        
-        Advertisement ad1 = Advertisement.builder()
-                .adPlayTime(300)
-                .count(10)
-                .adRevenue(BigDecimal.valueOf(50.00))
-                .build();
-        Advertisement ad2 = Advertisement.builder()
-                .adPlayTime(600)
-                .count(20)
-                .adRevenue(BigDecimal.valueOf(100.00))
-                .build();
-        Advertisement ad3 = Advertisement.builder()
-                .adPlayTime(900)
-                .count(15)
-                .adRevenue(BigDecimal.valueOf(75.00))
-                .build();
-        Advertisement ad4 = Advertisement.builder()
-                .adPlayTime(300)
-                .count(5)
-                .adRevenue(BigDecimal.valueOf(25.00))
-                .build();
-        Advertisement ad5 = Advertisement.builder()
-                .adPlayTime(600)
-                .count(10)
-                .adRevenue(BigDecimal.valueOf(50.00))
-                .build();
-        Advertisement ad6 = Advertisement.builder()
-                .adPlayTime(1200)
-                .count(8)
-                .adRevenue(BigDecimal.valueOf(40.00))
-                .build();
-        advertisementRepository.save(ad1);
-        advertisementRepository.save(ad2);
-        advertisementRepository.save(ad3);
-        advertisementRepository.save(ad4);
-        advertisementRepository.save(ad5);
-        advertisementRepository.save(ad6);
-
-        // Streaming과 Advertisement의 매핑 테이블 데이터 삽입
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming1)
-                .advertisement(ad1)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming1)
-                .advertisement(ad2)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming2)
-                .advertisement(ad1)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming2)
-                .advertisement(ad2)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming2)
-                .advertisement(ad3)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming3)
-                .advertisement(ad4)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming3)
-                .advertisement(ad5)
-                .build());
-        streamingAdMappingRepository.save(StreamingAdMapping.builder()
-                .streaming(streaming3)
-                .advertisement(ad6)
-                .build());
+    public void run(String... args) {
+        log.info("더미 데이터 생성 시작");
+        cleanupData();
+        insertStreamingData();
+        insertAdvertisementData();
+        insertStreamingAdMapping();
+        log.info("더미 데이터 생성 완료");
     }
 
+    private void cleanupData() {
+        log.info("기존 데이터 삭제 시작");
+        //jdbcTemplate.execute("DELETE FROM settlement_ad_views");
+        jdbcTemplate.execute("DELETE FROM streaming_ad_mapping");
+        jdbcTemplate.execute("DELETE FROM streaming");
+        jdbcTemplate.execute("DELETE FROM advertisement");
+        log.info("기존 데이터 삭제 완료");
+    }
+
+    private void insertStreamingData() {
+        log.info("스트리밍 데이터 생성 시작");
+        String sql = "INSERT INTO streaming (total_length, views, acc_play_time, member_id, created_at, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+
+        List<Object[]> batchArgs = new ArrayList<>();
+
+        for (long i = 1; i <= STREAMING_COUNT; i++) {
+            int totalLength = random.nextInt(3600) + 300;
+            long views = random.nextInt(2_000_000);
+            int accPlayTime = (int)(views * (random.nextDouble() * 0.8 + 0.2) * totalLength);
+
+            Object[] params = new Object[]{
+                    totalLength,
+                    views,
+                    accPlayTime,
+                    random.nextInt(1000) + 1,
+                    BASE_DATE.plusSeconds(random.nextInt(86400)),
+                    BASE_DATE.plusSeconds(random.nextInt(86400))
+            };
+            batchArgs.add(params);
+        }
+
+        jdbcTemplate.batchUpdate(sql, batchArgs);
+        log.info("스트리밍 데이터 생성 완료: 총 {}건", STREAMING_COUNT);
+    }
+
+    private void insertAdvertisementData() {
+        log.info("광고 데이터 생성 시작");
+        String sql = "INSERT INTO advertisement (created_at, updated_at) VALUES (?, ?)";
+
+        List<Object[]> batchArgs = new ArrayList<>();
+
+        for (long i = 1; i <= AD_COUNT; i++) {
+            Object[] params = new Object[]{
+                    BASE_DATE,
+                    BASE_DATE
+            };
+            batchArgs.add(params);
+        }
+
+        jdbcTemplate.batchUpdate(sql, batchArgs);
+        log.info("광고 데이터 생성 완료: 총 {}건", AD_COUNT);
+    }
+
+    private void insertStreamingAdMapping() {
+        log.info("스트리밍-광고 매핑 데이터 생성 시작");
+        String sql = "INSERT INTO streaming_ad_mapping (streaming_id, ad_id, play_time, views, last_settled_count, last_settlement_date, created_at, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        String streamingSql = "SELECT id, total_length, views FROM streaming";
+
+        jdbcTemplate.query(streamingSql, (rs) -> {
+            long streamingId = rs.getLong("id");
+            int totalLength = rs.getInt("total_length");
+            long streamingViews = rs.getLong("views");
+
+            // 5분(300초)당 1개 광고 삽입
+            int adCount = totalLength / 300;
+            List<Object[]> batchArgs = new ArrayList<>();
+
+            Set<Integer> usedAdIds = new HashSet<>();
+            for (int i = 0; i < adCount; i++) {
+                int adId;
+                do {
+                    adId = random.nextInt(AD_COUNT) + 1;
+                } while (usedAdIds.contains(adId));
+
+                usedAdIds.add(adId);
+                long adViews = (long) (streamingViews * (0.6 + random.nextDouble() * 0.3));
+
+                Object[] params = new Object[]{
+                        streamingId,
+                        adId,
+                        (i + 1) * 300,    // 5분, 10분, 15분... 시점
+                        adViews,  // 0~200만 조회수
+                        0L,               // 마지막 정산 시점의 조회수
+                        BASE_DATE.toLocalDate(),  // 마지막 정산 날짜
+                        BASE_DATE,
+                        BASE_DATE
+                };
+                batchArgs.add(params);
+            }
+
+            if (!batchArgs.isEmpty()) {
+                jdbcTemplate.batchUpdate(sql, batchArgs);
+            }
+
+            log.info("스트리밍 ID {} (길이: {}초) 처리 완료 (광고 {}개 매핑)", streamingId, totalLength, adCount);
+        });
+
+        log.info("스트리밍-광고 매핑 데이터 생성 완료");
+    }
 }
