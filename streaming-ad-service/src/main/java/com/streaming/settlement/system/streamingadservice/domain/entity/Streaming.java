@@ -23,9 +23,6 @@ public class Streaming extends BaseTimeEntity {
     @Column(nullable = false)
     private Long views = 0L;
 
-    @Column(nullable = false)
-    private Boolean isSettled = false;
-
     @Column(name = "acc_play_time", nullable = false)
     private Integer accPlayTime = 0;
 

@@ -4,28 +4,22 @@ import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Entity
 @Builder
 @AllArgsConstructor
-@Table(name = "streaming")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Streaming extends BaseTimeEntity {
+public class Advertisement extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "total_length", nullable = false)
-    private Integer totalLength;
+    @OneToMany(mappedBy = "advertisement")
+    private List<StreamingAdMapping> streamingAdMappings;
 
-    @Column(nullable = false)
-    private Long views = 0L;
 
-    @Column(name = "acc_play_time", nullable = false)
-    private Integer accPlayTime = 0;
-
-    private Long memberId;
 
 }
-

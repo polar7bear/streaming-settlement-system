@@ -1,4 +1,4 @@
-package com.streaming.settlement.system.streamingadservice.domain.entity;
+package com.streaming.settlement.system.settlementbatchservice.domain.entity.streaming;
 
 import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;

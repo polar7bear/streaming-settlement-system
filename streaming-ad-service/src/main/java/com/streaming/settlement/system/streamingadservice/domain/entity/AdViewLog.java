@@ -22,9 +22,9 @@ public class AdViewLog {
     @Column(name = "viewed_at", nullable = false)
     private LocalDateTime viewedAt;
 
-    @JoinColumn(name = "ad_id")
+    @JoinColumn(name = "mapping_id")
     @ManyToOne(fetch = FetchType.LAZY)
-    private Advertisement advertisement;
+    private StreamingAdMapping mapping;
 
     //@Column(name = "member_id", nullable = false) //이것도 마찬가지로 비회원 시청가능성때문에 null 가능
     @Column(name = "member_id")

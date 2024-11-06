@@ -1,5 +1,6 @@
 package com.streaming.settlement.system.streamingadservice.domain.entity;
 
+import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,26 +12,17 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Advertisement {
+public class Advertisement extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "ad_play_time", nullable = false)
-    private Integer adPlayTime = 0; // 광고 삽입시간대
 
-    @Column(nullable = false)
-    private Integer count = 0; // 광고 몇번재생되었는지? (조회수)
-
-    @Column(name = "ad_revenue")
-    private BigDecimal adRevenue;
 
     @OneToMany(mappedBy = "advertisement")
     private List<StreamingAdMapping> streamingAdMappings;
 
 
-    public void incrementCount() {
-        this.count += 1;
-    }
+
 }

@@ -7,6 +7,9 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Entity
 @Getter
@@ -29,12 +32,26 @@ public class Settlement extends BaseTimeEntity {
     private BigDecimal totalRevenue;
 
     @Column(nullable = false)
-    private Long views;
+    private Long streamingViews;
+
+    @ElementCollection
+    @CollectionTable(name = "settlement_ad_views",
+            joinColumns = @JoinColumn(name = "settlement_id"))
+    @MapKeyColumn(name = "streaming_ad_mapping_id")
+    @Column(name = "views")
+    private Map<Long, Long> adViews = new HashMap<>();  // 광고별 누적 조회수
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    @Column(name = "settlement_start_date", nullable = false)
+    private LocalDateTime settlementStartDate;
+
+    @Column(name = "settlement_end_date", nullable = false)
+    private LocalDateTime settlementEndDate;
+
+    @Column(name = "settlement_date", nullable = false)
     private LocalDate settlementDate;
 
     @Column(nullable = false)
@@ -43,5 +60,18 @@ public class Settlement extends BaseTimeEntity {
     @Column(nullable = false)
     private Long streamingId;
 
+    public void updateRevenue(
+            BigDecimal streamingRevenue,
+            BigDecimal adRevenue,
+            BigDecimal totalRevenue,
+            Long streamingViews,
+            Map<Long, Long> adViews
+    ) {
+        this.streamingRevenue = streamingRevenue;
+        this.adRevenue = adRevenue;
+        this.totalRevenue = totalRevenue;
+        this.streamingViews = streamingViews;
+        this.adViews = adViews;
+    }
 }
 
