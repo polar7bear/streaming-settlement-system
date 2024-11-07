@@ -89,54 +89,38 @@ public class DailySettlementJob {
             Optional<Settlement> prevSettlement = settlementRepository
                     .findTopByStreamingIdOrderBySettlementEndDateDesc(item.getId());
 
+            // 스트리밍 조회수 증가분 계산
             Long prevViews = prevSettlement
                     .map(Settlement::getStreamingViews)
                     .orElse(0L);
-
             Long todayViews = item.getViews() - prevViews;
 
-            // 스트리밍 수익 계산
+            // 광고 조회수 증가분 계산
+            Long prevAdViews = prevSettlement
+                    .map(Settlement::getAdViewCount)
+                    .orElse(0L);
+            Long todayAdViews = item.getAdViewCount() - prevAdViews;
+
+            // 수익 계산
             BigDecimal streamingRevenue = calculateStreamRevenue(prevViews, todayViews);
-
-            // 광고 수익 계산 및 조회수 추적
-            AdRevenueResult adResult = calculateAdRevenue(item.getId(), prevSettlement);
-
-            BigDecimal totalRevenue = streamingRevenue.add(adResult.revenue())
+            BigDecimal adRevenue = calculateAdRevenue(prevAdViews, todayAdViews);
+            BigDecimal totalRevenue = streamingRevenue.add(adRevenue)
                     .setScale(0, RoundingMode.FLOOR);
 
-            // 현재 정산 기간에 대한 정산 내역이 있는지 확인
-            Optional<Settlement> existingSettlement = settlementRepository
-                    .findByStreamingIdAndSettlementStartDateAndSettlementEndDate(
-                            item.getId(), startDate, endDate
-                    );
-
-            return existingSettlement
-                    .map(settlement -> {
-                        // 기존 정산 내역 업데이트
-                        settlement.updateRevenue(
-                                streamingRevenue,
-                                adResult.revenue(),
-                                totalRevenue,
-                                item.getViews(),
-                                adResult.adViews()
-                        );
-                        return settlement;
-                    })
-                    .orElseGet(() ->
-                            Settlement.builder()
-                                    .streamingRevenue(streamingRevenue)
-                                    .adRevenue(adResult.revenue())
-                                    .totalRevenue(totalRevenue)
-                                    .streamingViews(item.getViews())
-                                    .adViews(adResult.adViews())
-                                    .status(Status.PENDING)
-                                    .settlementDate(LocalDate.now().minusDays(1))
-                                    .settlementStartDate(startDate)
-                                    .settlementEndDate(endDate)
-                                    .memberId(item.getMemberId())
-                                    .streamingId(item.getId())
-                                    .build()
-                    );
+            // 새로운 정산 데이터 생성
+            return Settlement.builder()
+                    .streamingRevenue(streamingRevenue)
+                    .adRevenue(adRevenue)
+                    .totalRevenue(totalRevenue)
+                    .streamingViews(item.getViews())
+                    .adViewCount(item.getAdViewCount())
+                    .status(Status.PENDING)
+                    .settlementDate(LocalDate.now().minusDays(1))
+                    .settlementStartDate(startDate)
+                    .settlementEndDate(endDate)
+                    .memberId(item.getMemberId())
+                    .streamingId(item.getId())
+                    .build();
         };
     }
 
@@ -148,8 +132,6 @@ public class DailySettlementJob {
                 .build();
     }
 
-    private record AdRevenueResult(BigDecimal revenue, Map<Long, Long> adViews) {}
-
     private BigDecimal calculateStreamRevenue(Long prevViews, Long todayViews) {
         BigDecimal revenue = BigDecimal.ZERO;
         List<ViewPricing> pricingList = viewPricingRepository.findAll()
@@ -157,7 +139,6 @@ public class DailySettlementJob {
                 .sorted(Comparator.comparing(ViewPricing::getMinViews))
                 .toList();
 
-        long totalViews = prevViews + todayViews;
         long processedViews = prevViews;
         long remainingViews = todayViews;
 
@@ -185,38 +166,15 @@ public class DailySettlementJob {
         return revenue;
     }
 
-    private AdRevenueResult calculateAdRevenue(Long streamingId, Optional<Settlement> prevSettlement) {
-        List<StreamingAdMapping> adMappings = streamingAdMappingRepository.findByStreamingId(streamingId);
-        BigDecimal totalAdRevenue = BigDecimal.ZERO;
-        Map<Long, Long> currentAdViews = new HashMap<>();
-
-        for (StreamingAdMapping mapping : adMappings) {
-            long currentViews = mapping.getViews();
-            currentAdViews.put(mapping.getId(), currentViews);
-
-            long prevViews = prevSettlement
-                    .flatMap(s -> Optional.ofNullable(s.getAdViews().get(mapping.getId())))
-                    .orElse(0L);
-
-            long todayViews = currentViews - prevViews;
-
-            BigDecimal adRevenue = calculateAdRevenueForViews(prevViews, todayViews);
-            totalAdRevenue = totalAdRevenue.add(adRevenue);
-        }
-
-        return new AdRevenueResult(totalAdRevenue, currentAdViews);
-    }
-
-    private BigDecimal calculateAdRevenueForViews(long prevViews, long todayViews) {
+    private BigDecimal calculateAdRevenue(Long prevAdViews, Long todayAdViews) {
         BigDecimal revenue = BigDecimal.ZERO;
         List<ViewPricing> pricings = viewPricingRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(ViewPricing::getMinViews))
                 .toList();
 
-        long totalViews = prevViews + todayViews;
-        long processedViews = prevViews;
-        long remainingViews = todayViews;
+        long processedViews = prevAdViews;
+        long remainingViews = todayAdViews;
 
         for (ViewPricing pricing : pricings) {
             if (remainingViews <= 0) break;
