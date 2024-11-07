@@ -22,6 +22,9 @@ public class Streaming extends BaseTimeEntity {
     @Column(nullable = false)
     private Long views = 0L;
 
+    @Column(name = "ad_view_count", nullable = false)
+    private Long adViewCount = 0L;
+
     @Column(name = "acc_play_time", nullable = false)
     private Integer accPlayTime = 0;
 

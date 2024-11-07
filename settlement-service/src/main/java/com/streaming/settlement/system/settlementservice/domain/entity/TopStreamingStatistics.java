@@ -3,15 +3,13 @@ package com.streaming.settlement.system.settlementservice.domain.entity;
 import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import com.streaming.settlement.system.settlementservice.domain.enums.StatisticsType;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
-@Table(name = "top_streaming_statistics")
 @Builder
+@Getter
 @AllArgsConstructor
+@Table(name = "top_streaming_statistics")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TopStreamingStatistics extends BaseTimeEntity {
     @Id
