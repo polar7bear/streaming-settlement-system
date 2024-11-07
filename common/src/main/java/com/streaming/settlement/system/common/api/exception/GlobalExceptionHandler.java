@@ -2,10 +2,10 @@ package com.streaming.settlement.system.common.api.exception;
 
 import com.streaming.settlement.system.common.api.ApiError;
 import com.streaming.settlement.system.common.api.ApiErrorType;
-import com.streaming.settlement.system.common.api.ApiResponse;
 import com.streaming.settlement.system.common.api.exception.batch.BatchJobException;
 import com.streaming.settlement.system.common.api.exception.member.DuplicateMemberException;
 import com.streaming.settlement.system.common.api.exception.member.WrongPasswordException;
+import com.streaming.settlement.system.common.api.exception.statistics.NotFoundStatisticsException;
 import com.streaming.settlement.system.common.api.exception.streaming.NotFoundStreamingException;
 import com.streaming.settlement.system.common.api.exception.streaming.NotFoundStreamingViewLogException;
 import org.springframework.http.HttpStatus;
@@ -48,8 +48,15 @@ public class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(value = {BatchJobException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiError BatchJobException(BatchJobException e) {
+    public ApiError handleBatchJobException(BatchJobException e) {
         return new ApiError(ApiErrorType.NOT_FOUND, "404", "찾을 수 없는 Job 입니다.", e);
     }
 
+
+    @ResponseBody
+    @ExceptionHandler(value = {NotFoundStatisticsException.class})
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleNotFoundStatisticsException(BatchJobException e) {
+        return new ApiError(ApiErrorType.NOT_FOUND, "404", "존재하지 않는 통계데이터 입니다.", e);
+    }
 }
