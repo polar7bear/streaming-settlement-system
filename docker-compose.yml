@@ -78,6 +78,8 @@ services:
     depends_on:
       sss-database:
         condition: service_healthy
+    volumes:
+      - ./logs/settlement-batch-service:/logs
 
 
   api-gateway:
@@ -155,6 +157,79 @@ services:
       interval: 10s
       retries: 5
       start_period: 30s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.25
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - sss-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.25
+    container_name: logstash
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./elk/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044"
+    networks:
+      - sss-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.25
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - sss-network
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.17.25
+    container_name: filebeat
+    volumes:
+#      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs:/logs:ro
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    depends_on:
+      - logstash
+    networks:
+      - sss-network
+
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - sss-network
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - sss-network
+    depends_on:
+      - prometheus
+
+volumes:
+  esdata:
 
 networks:
   sss-network:

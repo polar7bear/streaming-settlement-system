@@ -14,6 +14,8 @@ COPY common/src /app/common/src
 COPY settlement-batch-service/build.gradle /app/settlement-batch-service/
 COPY settlement-batch-service/src /app/settlement-batch-service/src
 
+RUN mkdir /logs
+
 # Ensure gradlew is executable
 RUN chmod +x gradlew
 
