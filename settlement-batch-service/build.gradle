@@ -10,6 +10,10 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     testImplementation 'org.springframework.batch:spring-batch-test'
     runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'com.h2database:h2'
+
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.0'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 }
 
 dependencyManagement {
