@@ -2,12 +2,14 @@ package com.streaming.settlement.system.settlementbatchservice.repository.settle
 
 import com.streaming.settlement.system.settlementbatchservice.domain.entity.settlement.Settlement;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.util.List;
 
 public interface SettlementRepository extends JpaRepository<Settlement, Long> {
-    Optional<Settlement> findTopByStreamingIdOrderBySettlementEndDateDesc(Long id);
 
-    Optional<Settlement> findByStreamingIdAndSettlementStartDateAndSettlementEndDate(Long id, LocalDateTime startDate, LocalDateTime endDate);
+    @Query("SELECT s FROM Settlement s WHERE s.settlementDate <= :date " +
+            "AND s.id IN (SELECT MAX(s2.id) FROM Settlement s2 GROUP BY s2.streamingId)")
+    List<Settlement> findLatestSettlementsByDate(LocalDate date);
 }
