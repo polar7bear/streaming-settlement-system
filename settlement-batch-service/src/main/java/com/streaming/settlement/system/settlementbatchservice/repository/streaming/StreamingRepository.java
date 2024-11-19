@@ -12,10 +12,16 @@ import java.time.LocalDateTime;
 
 public interface StreamingRepository extends JpaRepository<Streaming, Long> {
 
-    @Query("SELECT s FROM Streaming s WHERE " +
-            "(s.lastSettlementDate IS NULL AND (s.views >= 1000 OR s.adViewCount >= 500)) OR " +
-            "(s.lastSettlementDate IS NOT NULL AND (s.views > s.lastSettlementViews OR s.adViewCount > s.lastSettlementAdCount))")
-    Page<Streaming> findStreamingsForSettlement(Pageable pageable);
+    @Query("""
+                SELECT s FROM Streaming s 
+                WHERE MOD(s.id, :gridSize) = :partitionIndex
+                AND (
+                    (s.lastSettlementDate IS NULL AND (s.views >= 1000 OR s.adViewCount >= 500))
+                    OR (s.lastSettlementDate IS NOT NULL 
+                        AND (s.views > s.lastSettlementViews OR s.adViewCount > s.lastSettlementAdCount))
+                )
+            """)
+    Page<Streaming> findStreamingsForSettlement(int gridSize, int partitionIndex, Pageable pageable);
 
     @Modifying
     @Transactional

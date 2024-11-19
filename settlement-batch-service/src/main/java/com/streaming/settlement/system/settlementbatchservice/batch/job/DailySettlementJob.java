@@ -17,32 +17,36 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.partition.support.Partitioner;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.SETTLEMENT_JOB;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Numeric.CHUNK_SIZE;
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Numeric.THREAD_COUNT;
-import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Parameter.ID;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Numeric.GRID_SIZE;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Parameter.*;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.QueryMethod.FIND_STREAMINGS_FOR_SETTLEMENT;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Reader.SETTLEMENT_READER;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Step.MASTER_STEP;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Step.SETTLEMENT_STEP;
 
 @Configuration
@@ -78,58 +82,65 @@ public class DailySettlementJob {
     public Job settlementJob() {
         return new JobBuilder(SETTLEMENT_JOB, jobRepository)
                 .listener(settlementJobListener)
-                .start(settlementStep())
+                .start(masterStep())
                 .build();
     }
 
     @Bean
-    public Step settlementStep() {
+    public Step masterStep() {
+        return new StepBuilder(MASTER_STEP, jobRepository)
+                .partitioner(SETTLEMENT_STEP, partitioner())
+                .step(workerStep())
+                .gridSize(GRID_SIZE)
+                .taskExecutor(new SimpleAsyncTaskExecutor())
+                .build();
+    }
+
+    @Bean
+    public Step workerStep() {
         return new StepBuilder(SETTLEMENT_STEP, jobRepository)
-                .<Streaming, Settlement>chunk(1000, transactionManager)
-                .reader(settlementReader())
+                .<Streaming, Settlement>chunk(CHUNK_SIZE, transactionManager)
+                .reader(settlementReader(null))
                 .processor(settlementProcessor())
                 .writer(settlementWriter())
                 .listener(settlementStepListener)
                 .listener(settlementItemWriteListener)
                 .listener(settlementChunkListener)
-                .taskExecutor(taskExecutor())
                 .build();
     }
 
     @Bean
-    public TaskExecutor taskExecutor() {
-        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("Settlement-");
-        executor.setConcurrencyLimit(THREAD_COUNT);
-        return executor;
+    public Partitioner partitioner() {
+        return gridSize -> {
+            Map<String, ExecutionContext> partitions = new HashMap<>(gridSize);
+            for (int i = 0; i < gridSize; i++) {
+                ExecutionContext context = new ExecutionContext();
+                context.putInt(PARTITION_INDEX, i);
+                partitions.put(PARTITION + i, context);
+            }
+            return partitions;
+        };
     }
 
     @Bean
     @StepScope
-    public RepositoryItemReader<Streaming> settlementReader() {
+    public RepositoryItemReader<Streaming> settlementReader(@Value("#{stepExecutionContext['partitionIndex']}") Integer partitionIndex) {
         return new RepositoryItemReaderBuilder<Streaming>()
                 .name(SETTLEMENT_READER)
                 .repository(streamingRepository)
                 .methodName(FIND_STREAMINGS_FOR_SETTLEMENT)
+                .arguments(GRID_SIZE, partitionIndex)
                 .pageSize(CHUNK_SIZE)
                 .sorts(Map.of(ID, Sort.Direction.ASC))
                 .saveState(false)
                 .build();
     }
 
+
     @Bean
     @StepScope
     public ItemProcessor<Streaming, Settlement> settlementProcessor() {
         return item -> {
-
-            // 첫 정산이 아닌 경우, 조회수 증가분 체크
-            if (item.getLastSettlementDate() != null) {
-                boolean hasIncreasedViews = item.getViews() > item.getLastSettlementViews();
-                boolean hasIncreasedAdViews = item.getAdViewCount() > item.getLastSettlementAdCount();
-                if (!hasIncreasedViews && !hasIncreasedAdViews) {
-                    return null;
-                }
-            }
-
             Long todayViews = item.getViews() - item.getLastSettlementViews();
             Long todayAdViews = item.getAdViewCount() - item.getLastSettlementAdCount();
 

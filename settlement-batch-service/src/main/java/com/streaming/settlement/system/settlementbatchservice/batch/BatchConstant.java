@@ -27,6 +27,7 @@ public final class BatchConstant {
         public static final String MONTHLY_TOP_PLAY_TIME_STEP = "monthlyTop5PlayTimeStep";
 
         public static final String SETTLEMENT_STEP = "settlementStep";
+        public static final String MASTER_STEP = "masterStep";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -60,6 +61,9 @@ public final class BatchConstant {
         public static final String END_DATE = "endDate";
 
         public static final String ID = "id";
+
+        public static final String PARTITION_INDEX = "partitionIndex";
+        public static final String PARTITION = "partition";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -74,6 +78,7 @@ public final class BatchConstant {
     public static final class Numeric {
         public static final int CHUNK_SIZE = 5000;
         public static final int THREAD_COUNT = 8;
+        public static final int GRID_SIZE = 8;
     }
 
 }
