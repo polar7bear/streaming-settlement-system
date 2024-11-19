@@ -70,4 +70,10 @@ public final class BatchConstant {
         public static final String FIND_ALL = "findAll";
     }
 
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static final class Numeric {
+        public static final int CHUNK_SIZE = 5000;
+        public static final int THREAD_COUNT = 8;
+    }
+
 }

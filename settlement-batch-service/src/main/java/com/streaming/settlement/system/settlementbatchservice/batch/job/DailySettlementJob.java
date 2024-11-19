@@ -9,13 +9,13 @@ import com.streaming.settlement.system.settlementbatchservice.domain.entity.sett
 import com.streaming.settlement.system.settlementbatchservice.domain.entity.streaming.Streaming;
 import com.streaming.settlement.system.settlementbatchservice.repository.settlement.SettlementRepository;
 import com.streaming.settlement.system.settlementbatchservice.repository.settlement.ViewPricingRepository;
-import com.streaming.settlement.system.settlementbatchservice.repository.streaming.StreamingAdMappingRepository;
 import com.streaming.settlement.system.settlementbatchservice.repository.streaming.StreamingRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -25,19 +25,21 @@ import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.SETTLEMENT_JOB;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Numeric.CHUNK_SIZE;
+import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Numeric.THREAD_COUNT;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Parameter.ID;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.QueryMethod.FIND_STREAMINGS_FOR_SETTLEMENT;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Reader.SETTLEMENT_READER;
@@ -90,21 +92,32 @@ public class DailySettlementJob {
                 .listener(settlementStepListener)
                 .listener(settlementItemWriteListener)
                 .listener(settlementChunkListener)
+                .taskExecutor(taskExecutor())
                 .build();
     }
 
     @Bean
+    public TaskExecutor taskExecutor() {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("Settlement-");
+        executor.setConcurrencyLimit(THREAD_COUNT);
+        return executor;
+    }
+
+    @Bean
+    @StepScope
     public RepositoryItemReader<Streaming> settlementReader() {
         return new RepositoryItemReaderBuilder<Streaming>()
                 .name(SETTLEMENT_READER)
                 .repository(streamingRepository)
                 .methodName(FIND_STREAMINGS_FOR_SETTLEMENT)
-                .pageSize(1000)
+                .pageSize(CHUNK_SIZE)
                 .sorts(Map.of(ID, Sort.Direction.ASC))
+                .saveState(false)
                 .build();
     }
 
     @Bean
+    @StepScope
     public ItemProcessor<Streaming, Settlement> settlementProcessor() {
         return item -> {
 
@@ -132,6 +145,7 @@ public class DailySettlementJob {
     }
 
     @Bean
+    @StepScope
     public ItemWriter<Settlement> settlementWriter() {
         return items -> {
             for (Settlement settlement : items) {
