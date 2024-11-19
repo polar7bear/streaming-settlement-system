@@ -75,6 +75,8 @@ services:
     networks:
       - sss-network
 
+    restart: always
+
     depends_on:
       sss-database:
         condition: service_healthy

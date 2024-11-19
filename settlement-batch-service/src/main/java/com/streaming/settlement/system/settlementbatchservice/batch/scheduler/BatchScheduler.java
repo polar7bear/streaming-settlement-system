@@ -27,7 +27,7 @@ public class BatchScheduler {
     private final static String STR_DATE = "date";
     private final static String STR_TIME = "time";
 
-    //@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    /*//@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void dailyTop5Job() {
         executeJob(DAILY_JOB);
@@ -43,10 +43,10 @@ public class BatchScheduler {
     @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
     public void monthlyTop5Job() {
         executeJob(MONTHLY_JOB);
-    }
+    }*/
 
     //@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
-    @Scheduled(cron = "10 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "30 48 * * * *", zone = "Asia/Seoul")
     public void settlementJob() {
         executeJob(SETTLEMENT_JOB);
     }
