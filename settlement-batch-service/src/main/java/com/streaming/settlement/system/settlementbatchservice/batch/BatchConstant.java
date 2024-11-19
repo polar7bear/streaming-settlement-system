@@ -66,7 +66,7 @@ public final class BatchConstant {
     public static final class QueryMethod {
         public static final String SAVE = "save";
 
-        public static final String FIND_BY_CREATED_AT_BETWEEN = "findByCreatedAtBetween";
+        public static final String FIND_STREAMINGS_FOR_SETTLEMENT = "findStreamingsForSettlement";
         public static final String FIND_ALL = "findAll";
     }
 
