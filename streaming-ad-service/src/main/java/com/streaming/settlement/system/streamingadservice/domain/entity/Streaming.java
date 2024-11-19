@@ -4,6 +4,7 @@ import com.streaming.settlement.system.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -29,6 +30,16 @@ public class Streaming extends BaseTimeEntity {
     @Column(name = "acc_play_time", nullable = false)
     private Integer accPlayTime = 0;
 
+    @Column(name = "last_settlement_views", nullable = false)
+    private Long lastSettlementViews = 0L;
+
+    @Column(name = "last_settlement_ad_count", nullable = false)
+    private Long lastSettlementAdCount = 0L;
+
+    @Column(name = "last_settlement_date")
+    private LocalDateTime lastSettlementDate;
+
+    @Column(nullable = false)
     private Long memberId;
 
     @OneToMany(mappedBy = "streaming")
