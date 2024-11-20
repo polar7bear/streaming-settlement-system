@@ -64,6 +64,8 @@ public final class BatchConstant {
 
         public static final String PARTITION_INDEX = "partitionIndex";
         public static final String PARTITION = "partition";
+        public static final String START_ID = "startId";
+        public static final String END_ID = "endId";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)

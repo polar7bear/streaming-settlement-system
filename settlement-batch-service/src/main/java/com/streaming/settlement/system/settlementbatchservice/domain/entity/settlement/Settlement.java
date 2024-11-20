@@ -8,13 +8,13 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @Entity
 @Getter
 @Builder
+@Table(indexes = {
+        @Index(name = "idx_settlement_date", columnList = "settlement_date, streaming_id")
+})
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Settlement extends BaseTimeEntity {

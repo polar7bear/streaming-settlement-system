@@ -34,11 +34,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Job.SETTLEMENT_JOB;
 import static com.streaming.settlement.system.settlementbatchservice.batch.BatchConstant.Numeric.CHUNK_SIZE;
@@ -100,7 +99,7 @@ public class DailySettlementJob {
     public Step workerStep() {
         return new StepBuilder(SETTLEMENT_STEP, jobRepository)
                 .<Streaming, Settlement>chunk(CHUNK_SIZE, transactionManager)
-                .reader(settlementReader(null))
+                .reader(settlementReader(null, null))
                 .processor(settlementProcessor())
                 .writer(settlementWriter())
                 .listener(settlementStepListener)
@@ -113,9 +112,18 @@ public class DailySettlementJob {
     public Partitioner partitioner() {
         return gridSize -> {
             Map<String, ExecutionContext> partitions = new HashMap<>(gridSize);
+
+            Long minId = streamingRepository.findMinId();
+            Long maxId = streamingRepository.findMaxId();
+            long targetSize = (maxId - minId) / gridSize + 1;
+
             for (int i = 0; i < gridSize; i++) {
+                long start = minId + (i * targetSize);
+                long end = Math.min(start + targetSize - 1, maxId);
+
                 ExecutionContext context = new ExecutionContext();
-                context.putInt(PARTITION_INDEX, i);
+                context.putLong(START_ID, start);
+                context.putLong(END_ID, end);
                 partitions.put(PARTITION + i, context);
             }
             return partitions;
@@ -124,12 +132,14 @@ public class DailySettlementJob {
 
     @Bean
     @StepScope
-    public RepositoryItemReader<Streaming> settlementReader(@Value("#{stepExecutionContext['partitionIndex']}") Integer partitionIndex) {
+    public RepositoryItemReader<Streaming> settlementReader(
+            @Value("#{stepExecutionContext['startId']}") Long startId,
+            @Value("#{stepExecutionContext['endId']}") Long endId) {
         return new RepositoryItemReaderBuilder<Streaming>()
                 .name(SETTLEMENT_READER)
                 .repository(streamingRepository)
                 .methodName(FIND_STREAMINGS_FOR_SETTLEMENT)
-                .arguments(GRID_SIZE, partitionIndex)
+                .arguments(startId, endId)
                 .pageSize(CHUNK_SIZE)
                 .sorts(Map.of(ID, Sort.Direction.ASC))
                 .saveState(false)
@@ -141,14 +151,17 @@ public class DailySettlementJob {
     @StepScope
     public ItemProcessor<Streaming, Settlement> settlementProcessor() {
         return item -> {
-            Long todayViews = item.getViews() - item.getLastSettlementViews();
-            Long todayAdViews = item.getAdViewCount() - item.getLastSettlementAdCount();
+            Long totalViews = item.getViews();
+            Long totalAdViews = item.getAdViewCount();
+            Long prevViews = item.getLastSettlementViews();
+            Long prevAdViews = item.getLastSettlementAdCount();
 
-            // 수익 계산
-            BigDecimal streamingRevenue = calculateRevenue(item.getLastSettlementViews(), todayViews, ViewPricing::getStreamRate);
-            BigDecimal adRevenue = calculateRevenue(item.getLastSettlementAdCount(), todayAdViews, ViewPricing::getAdRate);
-            BigDecimal totalRevenue = streamingRevenue.add(adRevenue)
-                    .setScale(0, RoundingMode.FLOOR);
+            Long todayViews = totalViews - prevViews;
+            Long todayAdViews = totalAdViews - prevAdViews;
+
+            BigDecimal streamingRevenue = calculateRevenue(prevViews, todayViews, ViewPricing::getStreamRate);
+            BigDecimal adRevenue = calculateRevenue(prevAdViews, todayAdViews, ViewPricing::getAdRate);
+            BigDecimal totalRevenue = streamingRevenue.add(adRevenue).setScale(0, RoundingMode.FLOOR);
 
             // 새로운 정산 데이터 생성
             return Settlement.of(item, todayViews, todayAdViews, streamingRevenue, adRevenue, totalRevenue);
@@ -159,14 +172,22 @@ public class DailySettlementJob {
     @StepScope
     public ItemWriter<Settlement> settlementWriter() {
         return items -> {
-            for (Settlement settlement : items) {
-                settlementRepository.save(settlement);
+            List<Settlement> settlements = new ArrayList<>(items.getItems());
+            // Bulk insert settlements
+            List<Settlement> savedSettlements = settlementRepository.saveAll(settlements);
 
-                streamingRepository.updateLastSettlementInfo(
-                        settlement.getStreamingId(),
-                        settlement.getStreamingViews(),
-                        settlement.getAdViewCount(),
-                        settlement.getSettlementDate().atStartOfDay()
+            // Prepare bulk update for streaming
+            Map<Long, Settlement> updateBatch = savedSettlements.stream()
+                    .collect(Collectors.toMap(
+                            Settlement::getStreamingId,
+                            settlement -> settlement
+                    ));
+
+            // Bulk update streaming
+            if (!updateBatch.isEmpty()) {
+                streamingRepository.bulkUpdateLastSettlementInfo(
+                        new ArrayList<>(updateBatch.keySet()),
+                        LocalDate.now().minusDays(1).atStartOfDay()
                 );
             }
         };
@@ -186,12 +207,15 @@ public class DailySettlementJob {
 
             if (processedViews >= maxViews) continue;
 
-            long viewsInRange;
+            /*long viewsInRange;
             if (processedViews < minViews) {
                 viewsInRange = Math.min(remainingViews, maxViews - minViews);
             } else {
                 viewsInRange = Math.min(remainingViews, maxViews - processedViews);
-            }
+            }*/
+            long startViews = Math.max(processedViews, minViews);
+            long endViews = Math.min(processedViews + remainingViews, maxViews);
+            long viewsInRange = endViews - startViews;
 
             if (viewsInRange > 0) {
                 BigDecimal rate = rateExtractor.apply(pricing);

@@ -10,6 +10,10 @@ import java.util.List;
 @Getter
 @Entity
 @Builder
+@Table(indexes = {
+        @Index(name = "idx_streaming_settlement", columnList = "last_settlement_date, views, ad_view_count"),
+        @Index(name = "idx_streaming_update", columnList = "id, last_settlement_views, last_settlement_ad_count")
+})
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Streaming extends BaseTimeEntity {

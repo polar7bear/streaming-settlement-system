@@ -15,6 +15,9 @@ import java.util.Map;
 
 @Entity
 @Getter
+@Table(indexes = {
+        @Index(name = "idx_settlement_date", columnList = "settlement_date, streaming_id")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Settlement extends BaseTimeEntity {
 

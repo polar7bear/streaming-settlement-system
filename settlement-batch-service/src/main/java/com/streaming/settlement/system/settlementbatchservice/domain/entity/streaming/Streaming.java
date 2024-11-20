@@ -10,7 +10,10 @@ import java.time.LocalDateTime;
 @Entity
 @Builder
 @AllArgsConstructor
-@Table(name = "streaming")
+@Table(indexes = {
+        @Index(name = "idx_streaming_settlement", columnList = "last_settlement_date, views, ad_view_count"),
+        @Index(name = "idx_streaming_update", columnList = "id, last_settlement_views, last_settlement_ad_count")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Streaming extends BaseTimeEntity {
 
