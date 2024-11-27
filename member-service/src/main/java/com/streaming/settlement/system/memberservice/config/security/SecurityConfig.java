@@ -24,7 +24,6 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomSuccessHandler customSuccessHandler;
 
-    // TODO: API Gateway 서버에서 토큰 검증 및 필터 구현하기
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
