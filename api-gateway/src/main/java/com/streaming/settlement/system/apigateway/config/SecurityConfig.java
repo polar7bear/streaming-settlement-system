@@ -21,8 +21,8 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
 
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/streams/**").permitAll()
-                        .anyExchange().authenticated())
+                        .anyExchange().permitAll()
+                )
 
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)

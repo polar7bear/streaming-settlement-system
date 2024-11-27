@@ -1,120 +1,115 @@
 package com.streaming.settlement.system.apigateway.filter;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SecurityException;
-import org.apache.http.HttpHeaders;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.cloud.gateway.filter.GlobalFilter;
-import org.springframework.core.annotation.Order;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
-@Order(1)
 @Component
-public class JwtFilter implements GlobalFilter {
+@Slf4j
+@RequiredArgsConstructor
+public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
 
-    private final String secretKey;
-    private final String issuer;
-    private final Key key;
+    public static final String BEARER_PREFIX = "Bearer ";
+    public static final String BLACKLIST_PREFIX = "BL:";
+    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
+    private final TokenProvider tokenProvider;
 
-    public JwtFilter(
-            @Value("${jwt.secret}") String secretKey,
-            @Value("${jwt.issuer}") String issuer) {
-        this.secretKey = secretKey;
-        this.issuer = issuer;
-        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-    }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String path = exchange.getRequest().getURI().getPath();
-        // TODO: AbstractGatewayFilterFactory에 대해 알아보자
-        if (path.startsWith("/streams/")) {
-            return chain.filter(exchange);
+    public GatewayFilter apply(Config config) {
+        return ((exchange, chain) -> {
+            ServerHttpRequest request = exchange.getRequest();
+            String path = request.getPath().value();
+
+            boolean skipAuth = config.isSkipAuth(path);
+            if (skipAuth) {
+                return chain.filter(exchange);
+            }
+
+            String token = resolveToken(request);
+            if (!StringUtils.hasText(token)) {
+                return onError(exchange, "존재하지 않는 토큰입니다.", HttpStatus.UNAUTHORIZED);
+            }
+
+            return checkBlacklist(token)
+                    .flatMap(isBlackListed -> {
+                        if (isBlackListed) {
+                            return onError(exchange, "블랙리스트에 등록된 토큰입니다.", HttpStatus.UNAUTHORIZED);
+                        }
+
+                        if (!tokenProvider.validationToken(token)) {
+                            return onError(exchange, "유효하지 않는 토큰입니다.", HttpStatus.UNAUTHORIZED);
+                        }
+
+                        Long memberId = tokenProvider.getMemberId(token);
+                        ServerHttpRequest mutatedRequest = request.mutate()
+                                .header("X-Member-Id", String.valueOf(memberId))
+                                .build();
+
+                        return chain.filter(exchange.mutate()
+                                .request(mutatedRequest)
+                                .build());
+                    });
+
+        });
+    }
+
+    @Getter
+    @Setter
+    public static class Config {
+        private List<String> excludePaths = new ArrayList<>();
+        private boolean enableDebug = false;
+
+        public boolean isSkipAuth(String path) {
+            return excludePaths.stream()
+                    .anyMatch(pattern -> {
+                        AntPathMatcher matcher = new AntPathMatcher();
+                        return matcher.match(pattern, path);
+                    });
         }
-
-        String token = resolveToken(exchange);
-
-        if (token != null && validationToken(token)) {
-            Authentication authentication = getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        } else {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
-
-        return chain.filter(exchange);
     }
 
-    public Authentication getAuthentication(String token) {
-        List<SimpleGrantedAuthority> authorities =
-                Collections.singletonList(new SimpleGrantedAuthority(getRole(token)));
-        return new UsernamePasswordAuthenticationToken(getUsername(token), null, authorities);
+    private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus httpStatus) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(httpStatus);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        byte[] bytes = ("{\"message\":\"" + message + "\"}").getBytes(StandardCharsets.UTF_8);
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        return response.writeWith(Mono.just(buffer));
     }
 
-    public boolean validationToken(String token) {
-        try {
-            String tokenType = commonValidation(token);
-            return tokenType.equals("ACCESS_TOKEN");
-        } catch (SecurityException | MalformedJwtException | ExpiredJwtException exception) {
-            return false;
-        }
+    private Mono<Boolean> checkBlacklist(String token) {
+        return reactiveRedisTemplate.hasKey(BLACKLIST_PREFIX + token);
     }
 
-    public String commonValidation(String token) {
-        String tokenType = getTokenType(token);
-        String targetIssuer = getIssuer(token);
-
-        if (!targetIssuer.equals(issuer)) return null;
-        return tokenType;
-    }
-
-    public String resolveToken(ServerWebExchange exchange) {
-        String header = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
-            return header.substring(7);
+    public String resolveToken(ServerHttpRequest request) {
+        List<String> authHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && !authHeader.isEmpty()) {
+            String bearerToken = authHeader.getFirst();
+            if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+                return bearerToken.substring(BEARER_PREFIX.length());
+            }
         }
         return null;
-    }
-
-    public Claims getClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
-    public String getUsername(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    public String getTokenType(String token) {
-        return getClaims(token).get("type", String.class);
-    }
-
-    public String getRole(String token) {
-        return getClaims(token).get("role", String.class);
-    }
-
-    public String getIssuer(String token) {
-        return getClaims(token).getIssuer();
     }
 }
