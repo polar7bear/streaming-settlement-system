@@ -1,5 +1,6 @@
 package com.streaming.settlement.system.memberservice.config.security.jwt;
 
+import com.streaming.settlement.system.memberservice.config.security.CustomUserDetails;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -48,14 +49,18 @@ public class TokenProvider implements InitializingBean {
                 .findFirst()
                 .get()
                 .toString();
+        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
+        Long id = principal.getMember().getId();
+
         long now = new Date().getTime();
-        Date expiration = new Date(now + this.tokenValidityTime);
+        Date expiration = new Date(now + this.tokenValidityTime * 1000);
 
         return Jwts.builder()
                 .setSubject(authentication.getName())
                 .setIssuer(issuer)
                 .claim("role", role)
                 .claim("type", ACCESS_TOKEN)
+                .claim("memberId", id)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .setExpiration(expiration)
                 .compact();
@@ -81,7 +86,7 @@ public class TokenProvider implements InitializingBean {
     }
 
     // 토큰 유효시간 가져오기
-    public Date getAccessTokenExpire(String token) {
+    public Date getTokenExpire(String token) {
         Claims claims = (Claims) Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
