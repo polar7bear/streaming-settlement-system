@@ -160,6 +160,18 @@ services:
       retries: 5
       start_period: 30s
 
+  sss-redis:
+    container_name: sss-redis
+    build:
+      dockerfile: Dockerfile
+      context: ./redis
+    image: sss/redis
+    ports:
+      - "6379:6379"
+    networks:
+      - sss-network
+
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.25
     container_name: elasticsearch
