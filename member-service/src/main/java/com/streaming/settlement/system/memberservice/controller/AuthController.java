@@ -1,6 +1,7 @@
 package com.streaming.settlement.system.memberservice.controller;
 
 import com.streaming.settlement.system.common.api.ApiResponse;
+import com.streaming.settlement.system.memberservice.dto.response.MemberSignInResponseDto;
 import com.streaming.settlement.system.memberservice.service.AuthService;
 import com.streaming.settlement.system.memberservice.dto.request.MemberSignInRequestDto;
 import com.streaming.settlement.system.memberservice.dto.request.MemberSignUpRequestDto;
@@ -29,9 +30,9 @@ public class AuthController {
     }
 
     @PostMapping("/sign-in")
-    public ApiResponse<?> signIn(@Valid @RequestBody MemberSignInRequestDto dto, HttpServletResponse response) {
-        String message = authService.signInV2(dto, response);
-        return new ApiResponse<>(message);
+    public ApiResponse<MemberSignInResponseDto> signIn(@Valid @RequestBody MemberSignInRequestDto dto, HttpServletResponse response) {
+        MemberSignInResponseDto responseDto = authService.signInV2(dto, response);
+        return new ApiResponse<>(responseDto);
     }
 
     @PostMapping("/sign-out")

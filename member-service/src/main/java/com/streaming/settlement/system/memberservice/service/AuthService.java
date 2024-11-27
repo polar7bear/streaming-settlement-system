@@ -4,6 +4,7 @@ import com.streaming.settlement.system.common.api.exception.member.DuplicateMemb
 import com.streaming.settlement.system.common.api.exception.member.WrongPasswordException;
 import com.streaming.settlement.system.memberservice.domain.entity.Member;
 import com.streaming.settlement.system.memberservice.config.security.jwt.TokenProvider;
+import com.streaming.settlement.system.memberservice.dto.response.MemberSignInResponseDto;
 import com.streaming.settlement.system.memberservice.repository.MemberRepository;
 import com.streaming.settlement.system.memberservice.dto.request.MemberSignInRequestDto;
 import com.streaming.settlement.system.memberservice.dto.request.MemberSignUpRequestDto;
@@ -20,14 +21,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    public static final String REFRESH_TOKEN = "Refresh-Token";
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final RedisTokenService redisTokenService;
 
     @Transactional
     public MemberSignUpResponseDto signUp(MemberSignUpRequestDto dto) {
@@ -62,22 +67,32 @@ public class AuthService {
         return "로그인에 성공하였습니다.";
     }
 
-    public String signInV2(MemberSignInRequestDto dto, HttpServletResponse response) {
+    public MemberSignInResponseDto signInV2(MemberSignInRequestDto dto, HttpServletResponse response) {
         Authentication authentication = authenticationManager
                 .authenticate(new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String accessToken = tokenProvider.createAccessToken(authentication);
-        Cookie cookie = setCookie(accessToken);
+        Date expire = tokenProvider.getTokenExpire(accessToken);
+
+        String refreshToken = tokenProvider.createRefreshToken(authentication);
+        Cookie cookie = setCookie(refreshToken);
         response.addCookie(cookie);
 
-        // TODO: 레디스 연결 후 리프레쉬토큰을 레디스에 저장
-        tokenProvider.createRefreshToken(authentication);
-        return "로그인에 성공하였습니다.";
+        redisTokenService.saveRefreshToken(dto.getEmail(), refreshToken);
+
+        return new MemberSignInResponseDto(dto.getEmail(), accessToken, expire);
     }
 
-    public Cookie setCookie(String accessToken) {
-        Cookie cookie = new Cookie("Access-Token", accessToken);
+    public void signOut(String email, String accessToken, HttpServletResponse response) {
+        redisTokenService.signOut(email, accessToken);
+        response.addCookie(invalidateCookie());
+    }
+
+
+
+    public Cookie setCookie(String refreshToken) {
+        Cookie cookie = new Cookie(REFRESH_TOKEN, refreshToken);
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setPath("/");
@@ -87,7 +102,7 @@ public class AuthService {
     }
 
     public Cookie invalidateCookie() {
-        Cookie cookie = new Cookie("Access-Token", null);
+        Cookie cookie = new Cookie(REFRESH_TOKEN, null);
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setPath("/");
