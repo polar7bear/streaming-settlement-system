@@ -2,13 +2,15 @@ package com.streaming.settlement.system.memberservice.service;
 
 import com.streaming.settlement.system.common.api.exception.member.DuplicateMemberException;
 import com.streaming.settlement.system.common.api.exception.member.WrongPasswordException;
-import com.streaming.settlement.system.memberservice.domain.entity.Member;
+import com.streaming.settlement.system.memberservice.config.security.CustomUserDetailsService;
 import com.streaming.settlement.system.memberservice.config.security.jwt.TokenProvider;
-import com.streaming.settlement.system.memberservice.dto.response.MemberSignInResponseDto;
-import com.streaming.settlement.system.memberservice.repository.MemberRepository;
+import com.streaming.settlement.system.memberservice.domain.entity.Member;
 import com.streaming.settlement.system.memberservice.dto.request.MemberSignInRequestDto;
 import com.streaming.settlement.system.memberservice.dto.request.MemberSignUpRequestDto;
+import com.streaming.settlement.system.memberservice.dto.response.MemberSignInResponseDto;
 import com.streaming.settlement.system.memberservice.dto.response.MemberSignUpResponseDto;
+import com.streaming.settlement.system.memberservice.dto.response.RefreshResponseDto;
+import com.streaming.settlement.system.memberservice.repository.MemberRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,7 @@ public class AuthService {
     private final TokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
     private final RedisTokenService redisTokenService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Transactional
     public MemberSignUpResponseDto signUp(MemberSignUpRequestDto dto) {
@@ -85,10 +89,26 @@ public class AuthService {
     }
 
     public void signOut(String email, String accessToken, HttpServletResponse response) {
-        redisTokenService.signOut(email, accessToken);
+        String substring = accessToken.substring(7);
+        redisTokenService.signOut(email, substring);
         response.addCookie(invalidateCookie());
     }
 
+    public RefreshResponseDto refresh(String originRefreshToken, String originAccessToken) {
+        String email = tokenProvider.getUsername(originRefreshToken);
+        boolean checkRefreshToken = redisTokenService.validateRefreshToken(email, originRefreshToken);
+
+        if (checkRefreshToken) {
+            redisTokenService.addAccessTokenToBlackList(originAccessToken);
+
+            UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            String refreshedAccessToken = tokenProvider.createAccessToken(authentication);
+
+            return RefreshResponseDto.of(email, refreshedAccessToken);
+        }
+        return null;
+    }
 
 
     public Cookie setCookie(String refreshToken) {
@@ -109,5 +129,9 @@ public class AuthService {
         cookie.setMaxAge(0);
 
         return cookie;
+    }
+
+    public String getEmailByRefreshTokenCookie(String refreshToken) {
+        return tokenProvider.getUsername(refreshToken);
     }
 }
