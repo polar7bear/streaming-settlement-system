@@ -20,7 +20,7 @@ public class StreamingController {
             @RequestParam(required = false) Integer currentTime,
             HttpServletRequest request) {
 
-        Integer startTime = streamingService.playStreaming(streamingId, memberId, currentTime == null ? 0 : currentTime, request.getRemoteAddr());
+        Integer startTime = streamingService.playStreaming(streamingId, memberId, currentTime == null ? 0 : currentTime, request.getHeader("X-Forwarded-For"));
         return new ApiResponse<>("동영상 재생 성공하였습니다.", startTime);
     }
 

@@ -7,9 +7,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface StreamingViewLogRepository extends JpaRepository<StreamingViewLog, Long> {
-    Optional<StreamingViewLog> findByMemberIdAndStreamingId(Long memberId, Long streamingId);
+    Optional<StreamingViewLog> findFirstByMemberIdAndStreamingIdOrderByViewedAtDesc(Long memberId, Long streamingId);
 
     boolean existsByStreamingIdAndIpAddressAndViewedAtAfter(Long streamingId, String ipAddress, LocalDateTime thirtySecondsAgo);
 
-    Optional<StreamingViewLog> findByIpAddressAndStreamingId(String ipAddress, Long streamingId);
+    Optional<StreamingViewLog> findFirstByIpAddressAndStreamingIdOrderByViewedAtDesc(String ipAddress, Long streamingId);
 }
